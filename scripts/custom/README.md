@@ -22,10 +22,11 @@ Status endpoint command:
   - installs missing build dependencies automatically (`go`, `npm`, `git`, `make`) on apt/dnf/yum/apk
   - clones/updates your fork
   - optionally fast-forwards from upstream
-  - builds AGH
+  - builds AGH with version from `git describe` (avoids `v0.0.0-dev`)
   - installs/upgrades `/opt/AdGuardHome/AdGuardHome`
   - restarts service with rollback on failure
   - installs helper commands into `/usr/local/sbin`
+  - skips rebuild/restart when no fork updates are detected (`AGH_SKIP_IF_NO_UPDATES=1`, default)
 
 - `agh-custom-update.sh`:
   - tiny wrapper that runs manager `apply`
@@ -56,3 +57,4 @@ After first run:
 - If upstream sync has conflicts, the script exits and keeps current running binary.
 - Auto dependency install is enabled by default (`AGH_AUTO_INSTALL_DEPS=1`).
 - Set `AGH_AUTO_INSTALL_DEPS=0` if you want strict/manual dependency management.
+- Rebuild skip is enabled by default (`AGH_SKIP_IF_NO_UPDATES=1`).

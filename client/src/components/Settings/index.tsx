@@ -48,6 +48,7 @@ interface SettingsProps {
     resetStats: (...args: unknown[]) => unknown;
     setFiltersConfig: (...args: unknown[]) => unknown;
     getFilteringStatus: (...args: unknown[]) => unknown;
+    getUpdate: (...args: unknown[]) => unknown;
     getCustomUpdate: (...args: unknown[]) => unknown;
     getCustomUpdateStatus: (...args: unknown[]) => unknown;
     getVersion: (...args: unknown[]) => unknown;
@@ -83,6 +84,9 @@ interface SettingsProps {
     };
     dashboard?: {
         dnsVersion?: string;
+        isUpdateAvailable?: boolean;
+        newVersion?: string;
+        canAutoUpdate?: boolean;
         processingVersion?: boolean;
         processingUpdate?: boolean;
         processingCustomUpdateStatus?: boolean;
@@ -176,6 +180,7 @@ class Settings extends Component<SettingsProps> {
             clearLogs,
             filtering,
             setFiltersConfig,
+            getUpdate,
             getCustomUpdate,
             getCustomUpdateStatus,
             getVersion,
@@ -189,12 +194,18 @@ class Settings extends Component<SettingsProps> {
         const processingVersion = !!dashboard?.processingVersion;
         const processingCustomUpdateStatus = !!dashboard?.processingCustomUpdateStatus;
         const processingCheckUpdates = processingVersion || processingCustomUpdateStatus;
+        const aghUpdateAvailable = !!dashboard?.isUpdateAvailable;
+        const aghCanAutoUpdate = !!dashboard?.canAutoUpdate;
+        const aghLatestVersion = aghUpdateAvailable ? dashboard?.newVersion || '-' : dnsVersion;
+        const aghStatus = aghUpdateAvailable ? t('agh_update_available') : t('agh_up_to_date');
         const forkConfigured = !!dashboard?.customUpdateForkConfigured;
         const forkInstalledRevision = dashboard?.customUpdateInstalledRevision || '-';
         const forkRemoteRevision = dashboard?.customUpdateRemoteRevision || '-';
+        const forkUpdateAvailable = !!dashboard?.customUpdateAvailable;
+        const canRunForkUpdate = forkConfigured && (forkUpdateAvailable || !!dashboard?.customUpdateStatusError);
         const forkStatus = !forkConfigured
             ? t('custom_update_not_configured')
-            : dashboard?.customUpdateAvailable
+            : forkUpdateAvailable
               ? t('custom_update_available')
               : t('custom_update_up_to_date');
 
@@ -215,14 +226,29 @@ class Settings extends Component<SettingsProps> {
                         type="button"
                         className="btn btn-outline-primary btn-sm"
                         onClick={() => getCustomUpdate()}
-                        disabled={processingUpdate}>
+                        disabled={processingUpdate || !canRunForkUpdate}>
                         <Trans>update_custom</Trans>
                     </button>
+                    {aghUpdateAvailable && aghCanAutoUpdate && (
+                        <button
+                            type="button"
+                            className="btn btn-primary btn-sm ml-2"
+                            onClick={() => getUpdate()}
+                            disabled={processingUpdate}>
+                            <Trans>update_now</Trans>
+                        </button>
+                    )}
                 </PageTitle>
 
                 <div className="settings-update-meta">
                     <div>
                         <strong>AGH:</strong> {dnsVersion}
+                    </div>
+                    <div>
+                        <strong>{t('agh_latest_version')}:</strong> {aghLatestVersion}
+                    </div>
+                    <div>
+                        <strong>{t('status')}:</strong> {aghStatus}
                     </div>
                     <div>
                         <strong>{t('custom_fork_version')}:</strong> {forkInstalledRevision}

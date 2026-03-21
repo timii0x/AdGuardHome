@@ -1,6 +1,6 @@
 import { connect } from 'react-redux';
 
-import { getCustomUpdate, getCustomUpdateStatus, getVersion, initSettings, toggleSetting } from '../actions';
+import { getCustomUpdate, getCustomUpdateStatus, getUpdate, getVersion, initSettings, toggleSetting } from '../actions';
 import { getBlockedServices, updateBlockedServices } from '../actions/services';
 import { getStatsConfig, setStatsConfig, resetStats } from '../actions/stats';
 import { clearLogs, getLogsConfig, setLogsConfig } from '../actions/queryLogs';
@@ -35,6 +35,7 @@ const mapDispatchToProps = {
     getFilteringStatus,
     setFiltersConfig,
     getCustomUpdate,
+    getUpdate,
     getVersion,
     getCustomUpdateStatus,
 };

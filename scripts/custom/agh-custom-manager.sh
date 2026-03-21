@@ -17,6 +17,7 @@ AGH_UPSTREAM_URL="${AGH_UPSTREAM_URL:-https://github.com/AdguardTeam/AdGuardHome
 AGH_UPSTREAM_BRANCH="${AGH_UPSTREAM_BRANCH:-master}"
 AGH_SYNC_UPSTREAM="${AGH_SYNC_UPSTREAM:-1}"
 AGH_AUTO_INSTALL_DEPS="${AGH_AUTO_INSTALL_DEPS:-1}"
+AGH_SKIP_IF_NO_UPDATES="${AGH_SKIP_IF_NO_UPDATES:-1}"
 AGH_SOURCE_DIR="${AGH_SOURCE_DIR:-/usr/local/src/agh-custom}"
 AGH_INSTALL_DIR="${AGH_INSTALL_DIR:-/opt/AdGuardHome}"
 AGH_SERVICE_NAME="${AGH_SERVICE_NAME:-AdGuardHome}"
@@ -176,10 +177,48 @@ clone_or_update_repo() {
 }
 
 build_binary() {
+    build_version="$1"
     cd "$AGH_SOURCE_DIR"
-    log "Building AdGuard Home ..."
-    make build
+    log "Building AdGuard Home (VERSION=$build_version) ..."
+    VERSION="$build_version" make build
     [ -x "$AGH_SOURCE_DIR/AdGuardHome" ] || fail "Build finished but binary was not created."
+}
+
+determine_build_version() {
+    build_version="$(git -C "$AGH_SOURCE_DIR" describe --tags --dirty --always 2>/dev/null || true)"
+    [ -n "$build_version" ] || build_version="v0.0.0-custom"
+
+    case "$build_version" in
+        v*)
+            printf '%s\n' "$build_version"
+            ;;
+        *)
+            printf 'v%s\n' "$build_version"
+            ;;
+    esac
+}
+
+should_skip_rebuild() {
+    [ "$AGH_SKIP_IF_NO_UPDATES" = "1" ] || return 1
+    [ -f "$AGH_STATE_FILE" ] || return 1
+
+    installed_commit="$(json_value installed_commit "$AGH_STATE_FILE")"
+    installed_build_version="$(json_value build_version "$AGH_STATE_FILE")"
+    current_commit="$(git -C "$AGH_SOURCE_DIR" rev-parse HEAD 2>/dev/null || true)"
+
+    [ -n "$installed_commit" ] || return 1
+    [ -n "$current_commit" ] || return 1
+    [ "$installed_commit" = "$current_commit" ] || return 1
+
+    # Force one rebuild for older state files and old 0.0.0-style builds.
+    [ -n "$installed_build_version" ] || return 1
+    case "$installed_build_version" in
+        v0.0.0*)
+            return 1
+            ;;
+    esac
+
+    return 0
 }
 
 install_tooling() {
@@ -205,9 +244,11 @@ EOF
 }
 
 write_build_info() {
+    build_version="$1"
     source_dir_esc="$(json_escape "$AGH_SOURCE_DIR")"
     branch_esc="$(json_escape "$AGH_REPO_BRANCH")"
     repo_url_esc="$(json_escape "$AGH_REPO_URL")"
+    build_version_esc="$(json_escape "$build_version")"
     installed_commit="$(git -C "$AGH_SOURCE_DIR" rev-parse HEAD 2>/dev/null || true)"
     installed_revision="$(git -C "$AGH_SOURCE_DIR" rev-parse --short HEAD 2>/dev/null || true)"
     installed_commit_esc="$(json_escape "$installed_commit")"
@@ -219,6 +260,7 @@ write_build_info() {
   "source_dir": "$source_dir_esc",
   "branch": "$branch_esc",
   "repo_url": "$repo_url_esc",
+  "build_version": "$build_version_esc",
   "installed_commit": "$installed_commit_esc",
   "installed_revision": "$installed_revision_esc",
   "updated_at": "$updated_at_esc"
@@ -283,8 +325,17 @@ apply_update() {
     require_cmd install
 
     clone_or_update_repo
-    build_binary
     install_tooling
+
+    if is_installed && should_skip_rebuild; then
+        current_revision="$(git -C "$AGH_SOURCE_DIR" rev-parse --short HEAD 2>/dev/null || true)"
+        log "No fork changes detected (revision ${current_revision:-unknown}). Skipping rebuild/restart."
+
+        return
+    fi
+
+    build_version="$(determine_build_version)"
+    build_binary "$build_version"
 
     if is_installed; then
         log "Existing AGH installation detected, upgrading ..."
@@ -293,7 +344,7 @@ apply_update() {
         install_fresh "$AGH_SOURCE_DIR/AdGuardHome"
     fi
 
-    write_build_info
+    write_build_info "$build_version"
 
     log "Custom AGH update finished successfully."
 }
@@ -305,6 +356,7 @@ status_json() {
     branch="$AGH_REPO_BRANCH"
     installed_revision=""
     installed_commit=""
+    build_version=""
     remote_revision=""
     remote_commit=""
     status_error=""
@@ -320,6 +372,7 @@ status_json() {
 
         installed_revision="$(json_value installed_revision "$AGH_STATE_FILE")"
         installed_commit="$(json_value installed_commit "$AGH_STATE_FILE")"
+        build_version="$(json_value build_version "$AGH_STATE_FILE")"
     fi
 
     if command -v git >/dev/null 2>&1 && [ -d "$source_dir/.git" ]; then
@@ -343,11 +396,13 @@ status_json() {
     fi
 
     [ -n "$installed_revision" ] || installed_revision="-"
+    [ -n "$build_version" ] || build_version="-"
     [ -n "$remote_revision" ] || remote_revision="-"
 
     source_dir_esc="$(json_escape "$source_dir")"
     branch_esc="$(json_escape "$branch")"
     installed_revision_esc="$(json_escape "$installed_revision")"
+    build_version_esc="$(json_escape "$build_version")"
     remote_revision_esc="$(json_escape "$remote_revision")"
     status_error_esc="$(json_escape "$status_error")"
 
@@ -374,6 +429,7 @@ status_json() {
   "fork_configured": $fork_bool,
   "source_dir": "$source_dir_esc",
   "branch": "$branch_esc",
+  "build_version": "$build_version_esc",
   "installed_revision": "$installed_revision_esc",
   "remote_revision": "$remote_revision_esc",
   "update_available": $update_bool,
@@ -394,6 +450,7 @@ Environment (important):
   AGH_REPO_BRANCH     Fork branch to build (default: master)
   AGH_SYNC_UPSTREAM   1=sync from upstream before build (default: 1)
   AGH_AUTO_INSTALL_DEPS 1=install missing build deps automatically (default: 1)
+  AGH_SKIP_IF_NO_UPDATES 1=skip rebuild when fork revision is unchanged (default: 1)
   AGH_UPSTREAM_BRANCH Upstream branch (default: master)
 EOF
 }

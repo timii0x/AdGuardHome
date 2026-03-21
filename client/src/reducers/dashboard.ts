@@ -87,10 +87,16 @@ const dashboard = handleActions(
                 return newState;
             }
 
+            const { can_autoupdate: canAutoUpdate } = payload || {};
+
             return {
                 ...state,
                 processingVersion: false,
                 checkUpdateFlag: !payload.disabled,
+                isUpdateAvailable: false,
+                newVersion: '',
+                announcementUrl: '',
+                canAutoUpdate: !!canAutoUpdate,
             };
         },
 
