@@ -255,6 +255,34 @@ export const getUpdate = () => async (dispatch: any, getState: any) => {
     }
 };
 
+export const getCustomUpdate = () => async (dispatch: any, getState: any) => {
+    const { dnsVersion, dnsStartTime } = getState().dashboard;
+
+    dispatch(getUpdateRequest());
+    const handleRequestError = () => {
+        dispatch(addErrorToast({ error: 'custom_update_failed' }));
+        dispatch(getUpdateFailure());
+    };
+
+    const handleRequestSuccess = (response: any) => {
+        const responseVersion = response.data?.version;
+        const responseStartTime = response.data?.start_time;
+
+        if (dnsVersion !== responseVersion || dnsStartTime !== responseStartTime) {
+            dispatch(getUpdateSuccess());
+
+            window.location.reload();
+        }
+    };
+
+    try {
+        await apiClient.getCustomUpdate();
+        checkStatus(handleRequestSuccess, handleRequestError);
+    } catch (error) {
+        handleRequestError();
+    }
+};
+
 export const getClientsRequest = createAction('GET_CLIENTS_REQUEST');
 export const getClientsFailure = createAction('GET_CLIENTS_FAILURE');
 export const getClientsSuccess = createAction('GET_CLIENTS_SUCCESS');

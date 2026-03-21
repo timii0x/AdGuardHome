@@ -4,7 +4,7 @@ import { shallowEqual, useDispatch, useSelector } from 'react-redux';
 
 import Topline from './Topline';
 
-import { getUpdate } from '../../actions';
+import { getCustomUpdate, getUpdate } from '../../actions';
 import { MANUAL_UPDATE_LINK } from '../../helpers/constants';
 import { RootState } from '../../initialState';
 
@@ -17,6 +17,10 @@ const UpdateTopline = () => {
 
     const handleUpdate = () => {
         dispatch(getUpdate());
+    };
+
+    const handleCustomUpdate = () => {
+        dispatch(getCustomUpdate());
     };
 
     return (
@@ -52,6 +56,13 @@ const UpdateTopline = () => {
                         manual_update
                     </Trans>
                 )}
+                <button
+                    type="button"
+                    className="btn btn-sm btn-outline-primary ml-2"
+                    onClick={handleCustomUpdate}
+                    disabled={processingUpdate}>
+                    <Trans>update_custom</Trans>
+                </button>
             </>
         </Topline>
     );

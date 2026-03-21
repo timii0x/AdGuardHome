@@ -5,7 +5,11 @@ import { useDispatch, useSelector } from 'react-redux';
 
 import i18next from 'i18next';
 import { clearDnsCache } from '../../../../actions/dnsConfig';
-import { CACHE_CONFIG_FIELDS, UINT32_RANGE } from '../../../../helpers/constants';
+import {
+    CACHE_CONFIG_FIELDS,
+    CACHE_OPTIMISTIC_PREFETCH_MODES,
+    UINT32_RANGE,
+} from '../../../../helpers/constants';
 import { replaceZeroWithEmptyString } from '../../../../helpers/helpers';
 import { RootState } from '../../../../initialState';
 import { Checkbox } from '../../../ui/Controls/Checkbox';
@@ -37,6 +41,7 @@ type FormData = {
     cache_ttl_min: number;
     cache_ttl_max: number;
     cache_optimistic: boolean;
+    cache_optimistic_prefetch_mode: string;
 };
 
 type CacheFormProps = {
@@ -64,6 +69,8 @@ const Form = ({ initialValues, onSubmit }: CacheFormProps) => {
             cache_ttl_min: initialValues?.cache_ttl_min || 0,
             cache_ttl_max: initialValues?.cache_ttl_max || 0,
             cache_optimistic: initialValues?.cache_optimistic || false,
+            cache_optimistic_prefetch_mode:
+                initialValues?.cache_optimistic_prefetch_mode || CACHE_OPTIMISTIC_PREFETCH_MODES.all,
         },
     });
 
@@ -71,6 +78,7 @@ const Form = ({ initialValues, onSubmit }: CacheFormProps) => {
     const cache_size = watch('cache_size');
     const cache_ttl_min = watch('cache_ttl_min');
     const cache_ttl_max = watch('cache_ttl_max');
+    const cache_optimistic = watch('cache_optimistic');
 
     const minExceedsMax = cache_ttl_min > 0 && cache_ttl_max > 0 && cache_ttl_min > cache_ttl_max;
     const cacheSizeZeroWhenEnabled = cache_enabled && cache_size === 0;
@@ -157,6 +165,37 @@ const Form = ({ initialValues, onSubmit }: CacheFormProps) => {
                     </div>
                 </div>
             </div>
+
+            {cache_optimistic && (
+                <div className="row">
+                    <div className="col-12 col-md-7">
+                        <div className="form__group form__group--settings">
+                            <label
+                                htmlFor={CACHE_CONFIG_FIELDS.cache_optimistic_prefetch_mode}
+                                className="form__label form__label--with-desc">
+                                {t('cache_optimistic_prefetch_mode')}
+                            </label>
+                            <div className="form__desc form__desc--top">{t('cache_optimistic_prefetch_mode_desc')}</div>
+                            <select
+                                id={CACHE_CONFIG_FIELDS.cache_optimistic_prefetch_mode}
+                                data-testid="dns_cache_optimistic_prefetch_mode"
+                                className="form-control custom-select"
+                                disabled={processingSetConfig}
+                                {...register('cache_optimistic_prefetch_mode')}>
+                                <option value={CACHE_OPTIMISTIC_PREFETCH_MODES.all}>
+                                    {t('cache_optimistic_prefetch_all')}
+                                </option>
+                                <option value={CACHE_OPTIMISTIC_PREFETCH_MODES.hits_2_per_hour}>
+                                    {t('cache_optimistic_prefetch_hits_2')}
+                                </option>
+                                <option value={CACHE_OPTIMISTIC_PREFETCH_MODES.hits_5_per_hour}>
+                                    {t('cache_optimistic_prefetch_hits_5')}
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <button
                 type="submit"

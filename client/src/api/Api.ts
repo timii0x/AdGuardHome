@@ -54,6 +54,7 @@ class Api {
     GLOBAL_VERSION = { path: 'version.json', method: 'POST' };
 
     GLOBAL_UPDATE = { path: 'update', method: 'POST' };
+    GLOBAL_CUSTOM_UPDATE = { path: 'custom_update', method: 'POST' };
 
     getGlobalStatus() {
         const { path, method } = this.GLOBAL_STATUS;
@@ -79,6 +80,12 @@ class Api {
 
     getUpdate() {
         const { path, method } = this.GLOBAL_UPDATE;
+
+        return this.makeRequest(path, method);
+    }
+
+    getCustomUpdate() {
+        const { path, method } = this.GLOBAL_CUSTOM_UPDATE;
 
         return this.makeRequest(path, method);
     }

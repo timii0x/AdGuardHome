@@ -184,6 +184,7 @@ func (web *webAPI) registerControlHandlers() {
 		web.postInstallHandler(http.HandlerFunc(web.handleVersionJSON)),
 	)
 	web.httpReg.Register(http.MethodPost, "/control/update", web.handleUpdate)
+	web.httpReg.Register(http.MethodPost, "/control/custom_update", web.handleCustomUpdate)
 
 	web.httpReg.Register(http.MethodGet, "/control/status", web.handleStatus)
 	web.httpReg.Register(

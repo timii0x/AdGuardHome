@@ -100,6 +100,10 @@ type jsonDNSConfig struct {
 	// CacheOptimistic defines if expired entries should be served.
 	CacheOptimistic *bool `json:"cache_optimistic"`
 
+	// CacheOptimisticPrefetchMode defines the strategy for prefetching
+	// optimistic cache entries in background.
+	CacheOptimisticPrefetchMode *cacheOptimisticPrefetchMode `json:"cache_optimistic_prefetch_mode,omitempty"`
+
 	// ResolveClients defines if clients IPs should be resolved into hostnames.
 	ResolveClients *bool `json:"resolve_clients"`
 
@@ -171,9 +175,15 @@ func (s *Server) getDNSConfig(ctx context.Context) (c *jsonDNSConfig) {
 	cacheMinTTL := s.conf.CacheMinTTL
 	cacheMaxTTL := s.conf.CacheMaxTTL
 	cacheOptimistic := s.conf.CacheOptimistic
+	cacheOptimisticPrefetchMode := normalizePrefetchMode(s.conf.CacheOptimisticPrefetchMode)
 	resolveClients := s.conf.AddrProcConf.UseRDNS
 	usePrivateRDNS := s.conf.UsePrivateRDNS
 	localPTRUpstreams := stringutil.CloneSliceOrEmpty(s.conf.LocalPTRResolvers)
+
+	var cacheOptimisticPrefetchModePtr *cacheOptimisticPrefetchMode
+	if cacheOptimisticPrefetchMode != cacheOptimisticPrefetchModeDisabled {
+		cacheOptimisticPrefetchModePtr = &cacheOptimisticPrefetchMode
+	}
 
 	var upstreamMode jsonUpstreamMode
 	switch s.conf.UpstreamMode {
@@ -217,6 +227,7 @@ func (s *Server) getDNSConfig(ctx context.Context) (c *jsonDNSConfig) {
 		CacheMinTTL:              &cacheMinTTL,
 		CacheMaxTTL:              &cacheMaxTTL,
 		CacheOptimistic:          &cacheOptimistic,
+		CacheOptimisticPrefetchMode: cacheOptimisticPrefetchModePtr,
 		UpstreamMode:             &upstreamMode,
 		ResolveClients:           &resolveClients,
 		UsePrivateRDNS:           &usePrivateRDNS,
@@ -318,6 +329,12 @@ func (req *jsonDNSConfig) validate(
 	}
 
 	err = req.validateCacheSettings(curCacheSize)
+	if err != nil {
+		// Don't wrap the error since it's informative enough as is.
+		return err
+	}
+
+	err = req.checkCachePrefetchMode()
 	if err != nil {
 		// Don't wrap the error since it's informative enough as is.
 		return err
@@ -663,6 +680,7 @@ func (s *Server) setConfigRestartable(dc *jsonDNSConfig) (shouldRestart bool) {
 		setIfNotNil(&s.conf.CacheMinTTL, dc.CacheMinTTL),
 		setIfNotNil(&s.conf.CacheMaxTTL, dc.CacheMaxTTL),
 		setIfNotNil(&s.conf.CacheOptimistic, dc.CacheOptimistic),
+		setIfNotNil(&s.conf.CacheOptimisticPrefetchMode, dc.CacheOptimisticPrefetchMode),
 		setIfNotNil(&s.conf.AddrProcConf.UseRDNS, dc.ResolveClients),
 		setIfNotNil(&s.conf.UsePrivateRDNS, dc.UsePrivateRDNS),
 		setIfNotNil(&s.conf.RatelimitSubnetLenIPv4, dc.RatelimitSubnetLenIPv4),

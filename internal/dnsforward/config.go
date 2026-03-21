@@ -123,6 +123,10 @@ type Config struct {
 	// CacheOptimistic defines if optimistic cache mechanism should be used.
 	CacheOptimistic bool `yaml:"cache_optimistic"`
 
+	// CacheOptimisticPrefetchMode defines host selection strategy for
+	// background prefetching when optimistic cache is enabled.
+	CacheOptimisticPrefetchMode cacheOptimisticPrefetchMode `yaml:"cache_optimistic_prefetch_mode,omitempty"`
+
 	// CacheOptimisticAnswerTTL is the default TTL for expired cached responses.
 	CacheOptimisticAnswerTTL timeutil.Duration `yaml:"cache_optimistic_answer_ttl"`
 

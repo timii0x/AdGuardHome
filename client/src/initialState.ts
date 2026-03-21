@@ -334,6 +334,7 @@ export type DnsConfigData = {
     cache_ttl_max?: number;
     cache_ttl_min?: number;
     cache_optimistic?: boolean;
+    cache_optimistic_prefetch_mode?: string;
 };
 
 export type FilteringData = {

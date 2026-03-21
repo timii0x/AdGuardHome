@@ -1,5 +1,5 @@
 import React, { Component, Fragment } from 'react';
-import { withTranslation } from 'react-i18next';
+import { Trans, withTranslation } from 'react-i18next';
 
 import i18next from 'i18next';
 import StatsConfig from './StatsConfig';
@@ -48,6 +48,7 @@ interface SettingsProps {
     resetStats: (...args: unknown[]) => unknown;
     setFiltersConfig: (...args: unknown[]) => unknown;
     getFilteringStatus: (...args: unknown[]) => unknown;
+    getCustomUpdate: (...args: unknown[]) => unknown;
     t: (...args: unknown[]) => string;
     getLogsConfig?: (...args: unknown[]) => unknown;
     setLogsConfig?: (...args: unknown[]) => unknown;
@@ -77,6 +78,9 @@ interface SettingsProps {
         interval?: number;
         enabled?: boolean;
         processingSetConfig?: boolean;
+    };
+    dashboard?: {
+        processingUpdate?: boolean;
     };
 }
 
@@ -162,14 +166,25 @@ class Settings extends Component<SettingsProps> {
             clearLogs,
             filtering,
             setFiltersConfig,
+            getCustomUpdate,
+            dashboard,
             t,
         } = this.props;
 
         const isDataReady = !settings.processing && !stats.processingGetConfig && !queryLogs.processingGetConfig;
+        const processingUpdate = !!dashboard?.processingUpdate;
 
         return (
             <Fragment>
-                <PageTitle title={t('general_settings')} />
+                <PageTitle title={t('general_settings')}>
+                    <button
+                        type="button"
+                        className="btn btn-outline-primary btn-sm"
+                        onClick={() => getCustomUpdate()}
+                        disabled={processingUpdate}>
+                        <Trans>update_custom</Trans>
+                    </button>
+                </PageTitle>
 
                 {!isDataReady && <Loading />}
 

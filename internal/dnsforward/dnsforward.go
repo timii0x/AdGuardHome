@@ -176,6 +176,16 @@ type Server struct {
 	// conf is the current configuration of the server.
 	conf ServerConfig
 
+	// prefetchHosts keeps per-domain counters used by the optimistic cache
+	// prefetch worker.
+	prefetchHosts map[string]*prefetchHostStats
+
+	// prefetchLock protects prefetchHosts.
+	prefetchLock sync.Mutex
+
+	// prefetchCancel cancels the optimistic prefetch worker.
+	prefetchCancel context.CancelFunc
+
 	// serverLock protects Server.
 	serverLock sync.RWMutex
 
@@ -255,6 +265,7 @@ func NewServer(p DNSCreateParams) (s *Server, err error) {
 		conf: ServerConfig{
 			ServePlainDNS: true,
 		},
+		prefetchHosts: map[string]*prefetchHostStats{},
 	}
 
 	s.sysResolvers, err = sysresolv.NewSystemResolvers(nil, defaultPlainDNSPort)
@@ -473,6 +484,7 @@ func (s *Server) startLocked(ctx context.Context) error {
 	err := s.dnsProxy.Start(ctx)
 	if err == nil {
 		s.isRunning = true
+		s.startOptimisticPrefetchLocked()
 	}
 
 	return err
@@ -789,6 +801,8 @@ func (s *Server) Stop(ctx context.Context) error {
 // stopLocked stops the DNS server without locking.  s.serverLock is expected to
 // be locked.
 func (s *Server) stopLocked(ctx context.Context) {
+	s.stopOptimisticPrefetchLocked()
+
 	// TODO(e.burkov, a.garipov):  Return critical errors, not just log them.
 	// This will require filtering all the non-critical errors in
 	// [upstream.Upstream] implementations.
