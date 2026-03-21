@@ -21,6 +21,25 @@ const (
 	cacheOptimisticPrefetchModeHits5    cacheOptimisticPrefetchMode = "hits_5_per_hour"
 )
 
+const defaultPrefetchKeepDays uint32 = 5
+
+func isValidPrefetchKeepDays(days uint32) (ok bool) {
+	switch days {
+	case 1, 3, 5, 7, 14:
+		return true
+	default:
+		return false
+	}
+}
+
+func normalizePrefetchKeepDays(days uint32) (normalized uint32) {
+	if isValidPrefetchKeepDays(days) {
+		return days
+	}
+
+	return defaultPrefetchKeepDays
+}
+
 func normalizePrefetchMode(mode cacheOptimisticPrefetchMode) (normalized cacheOptimisticPrefetchMode) {
 	if mode == "" {
 		return cacheOptimisticPrefetchModeDisabled
@@ -59,7 +78,6 @@ type prefetchTarget struct {
 
 const (
 	prefetchTickInterval = time.Minute
-	prefetchKeepFor      = 5 * 24 * time.Hour
 	prefetchCooldown     = 10 * time.Minute
 	prefetchMaxPerTick   = 256
 	prefetchMaxTracked   = 100_000
@@ -105,12 +123,12 @@ func (s *Server) runOptimisticPrefetchLoop(ctx context.Context) {
 }
 
 func (s *Server) runOptimisticPrefetchTick(ctx context.Context, now time.Time) {
-	mode, prx, canRun := s.prefetchRuntime()
+	mode, keepDays, prx, canRun := s.prefetchRuntime()
 	if !canRun {
 		return
 	}
 
-	targets := s.collectPrefetchTargets(now, mode)
+	targets := s.collectPrefetchTargets(now, mode, keepDays)
 	for _, target := range targets {
 		if target.wantA {
 			s.prefetchResolve(ctx, prx, target.host, dns.TypeA)
@@ -125,6 +143,7 @@ func (s *Server) runOptimisticPrefetchTick(ctx context.Context, now time.Time) {
 // prefetchRuntime returns the current prefetch mode and proxy.
 func (s *Server) prefetchRuntime() (
 	mode cacheOptimisticPrefetchMode,
+	keepDays uint32,
 	prx *proxy.Proxy,
 	canRun bool,
 ) {
@@ -132,25 +151,28 @@ func (s *Server) prefetchRuntime() (
 	defer s.serverLock.RUnlock()
 
 	mode = normalizePrefetchMode(s.conf.CacheOptimisticPrefetchMode)
+	keepDays = normalizePrefetchKeepDays(s.conf.CacheOptimisticPrefetchKeepDays)
 	if !s.isRunning || !s.conf.CacheEnabled || !s.conf.CacheOptimistic || mode == cacheOptimisticPrefetchModeDisabled {
-		return cacheOptimisticPrefetchModeDisabled, nil, false
+		return cacheOptimisticPrefetchModeDisabled, 0, nil, false
 	}
 
-	return mode, s.dnsProxy, s.dnsProxy != nil
+	return mode, keepDays, s.dnsProxy, s.dnsProxy != nil
 }
 
 func (s *Server) collectPrefetchTargets(
 	now time.Time,
 	mode cacheOptimisticPrefetchMode,
+	keepDays uint32,
 ) (targets []prefetchTarget) {
 	hourStart := now.Truncate(time.Hour)
+	keepFor := time.Duration(keepDays) * 24 * time.Hour
 
 	s.prefetchLock.Lock()
 	defer s.prefetchLock.Unlock()
 
 	targets = make([]prefetchTarget, 0, prefetchMaxPerTick)
 	for host, stats := range s.prefetchHosts {
-		if now.Sub(stats.lastSeen) > prefetchKeepFor {
+		if now.Sub(stats.lastSeen) > keepFor {
 			delete(s.prefetchHosts, host)
 
 			continue
@@ -284,6 +306,22 @@ func (req *jsonDNSConfig) checkCachePrefetchMode() (err error) {
 	mode := *req.CacheOptimisticPrefetchMode
 	if !isValidPrefetchMode(mode) {
 		return fmt.Errorf("cache_optimistic_prefetch_mode: incorrect value %q", mode)
+	}
+
+	return nil
+}
+
+func (req *jsonDNSConfig) checkCachePrefetchKeepDays() (err error) {
+	if req.CacheOptimisticPrefetchKeepDays == nil {
+		return nil
+	}
+
+	days := *req.CacheOptimisticPrefetchKeepDays
+	if !isValidPrefetchKeepDays(days) {
+		return fmt.Errorf(
+			"cache_optimistic_prefetch_keep_days: incorrect value %d (supported: 1,3,5,7,14)",
+			days,
+		)
 	}
 
 	return nil

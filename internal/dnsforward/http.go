@@ -104,6 +104,10 @@ type jsonDNSConfig struct {
 	// optimistic cache entries in background.
 	CacheOptimisticPrefetchMode *cacheOptimisticPrefetchMode `json:"cache_optimistic_prefetch_mode,omitempty"`
 
+	// CacheOptimisticPrefetchKeepDays defines for how many days to keep
+	// refreshing domain records after the last seen request.
+	CacheOptimisticPrefetchKeepDays *uint32 `json:"cache_optimistic_prefetch_keep_days,omitempty"`
+
 	// ResolveClients defines if clients IPs should be resolved into hostnames.
 	ResolveClients *bool `json:"resolve_clients"`
 
@@ -176,13 +180,16 @@ func (s *Server) getDNSConfig(ctx context.Context) (c *jsonDNSConfig) {
 	cacheMaxTTL := s.conf.CacheMaxTTL
 	cacheOptimistic := s.conf.CacheOptimistic
 	cacheOptimisticPrefetchMode := normalizePrefetchMode(s.conf.CacheOptimisticPrefetchMode)
+	cacheOptimisticPrefetchKeepDays := normalizePrefetchKeepDays(s.conf.CacheOptimisticPrefetchKeepDays)
 	resolveClients := s.conf.AddrProcConf.UseRDNS
 	usePrivateRDNS := s.conf.UsePrivateRDNS
 	localPTRUpstreams := stringutil.CloneSliceOrEmpty(s.conf.LocalPTRResolvers)
 
 	var cacheOptimisticPrefetchModePtr *cacheOptimisticPrefetchMode
+	var cacheOptimisticPrefetchKeepDaysPtr *uint32
 	if cacheOptimisticPrefetchMode != cacheOptimisticPrefetchModeDisabled {
 		cacheOptimisticPrefetchModePtr = &cacheOptimisticPrefetchMode
+		cacheOptimisticPrefetchKeepDaysPtr = &cacheOptimisticPrefetchKeepDays
 	}
 
 	var upstreamMode jsonUpstreamMode
@@ -228,6 +235,7 @@ func (s *Server) getDNSConfig(ctx context.Context) (c *jsonDNSConfig) {
 		CacheMaxTTL:              &cacheMaxTTL,
 		CacheOptimistic:          &cacheOptimistic,
 		CacheOptimisticPrefetchMode: cacheOptimisticPrefetchModePtr,
+		CacheOptimisticPrefetchKeepDays: cacheOptimisticPrefetchKeepDaysPtr,
 		UpstreamMode:             &upstreamMode,
 		ResolveClients:           &resolveClients,
 		UsePrivateRDNS:           &usePrivateRDNS,
@@ -335,6 +343,12 @@ func (req *jsonDNSConfig) validate(
 	}
 
 	err = req.checkCachePrefetchMode()
+	if err != nil {
+		// Don't wrap the error since it's informative enough as is.
+		return err
+	}
+
+	err = req.checkCachePrefetchKeepDays()
 	if err != nil {
 		// Don't wrap the error since it's informative enough as is.
 		return err
@@ -681,6 +695,7 @@ func (s *Server) setConfigRestartable(dc *jsonDNSConfig) (shouldRestart bool) {
 		setIfNotNil(&s.conf.CacheMaxTTL, dc.CacheMaxTTL),
 		setIfNotNil(&s.conf.CacheOptimistic, dc.CacheOptimistic),
 		setIfNotNil(&s.conf.CacheOptimisticPrefetchMode, dc.CacheOptimisticPrefetchMode),
+		setIfNotNil(&s.conf.CacheOptimisticPrefetchKeepDays, dc.CacheOptimisticPrefetchKeepDays),
 		setIfNotNil(&s.conf.AddrProcConf.UseRDNS, dc.ResolveClients),
 		setIfNotNil(&s.conf.UsePrivateRDNS, dc.UsePrivateRDNS),
 		setIfNotNil(&s.conf.RatelimitSubnetLenIPv4, dc.RatelimitSubnetLenIPv4),

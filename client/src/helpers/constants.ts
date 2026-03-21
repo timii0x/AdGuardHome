@@ -495,6 +495,7 @@ export const CACHE_CONFIG_FIELDS = {
     cache_ttl_min: 'cache_ttl_min',
     cache_ttl_max: 'cache_ttl_max',
     cache_optimistic_prefetch_mode: 'cache_optimistic_prefetch_mode',
+    cache_optimistic_prefetch_keep_days: 'cache_optimistic_prefetch_keep_days',
 };
 
 export const CACHE_OPTIMISTIC_PREFETCH_MODES = {
@@ -502,6 +503,8 @@ export const CACHE_OPTIMISTIC_PREFETCH_MODES = {
     hits_2_per_hour: 'hits_2_per_hour',
     hits_5_per_hour: 'hits_5_per_hour',
 };
+
+export const CACHE_OPTIMISTIC_PREFETCH_KEEP_DAYS = [1, 3, 5, 7, 14];
 
 export const isFirefox = navigator.userAgent.indexOf('Firefox') !== -1;
 export const COMMENT_LINE_DEFAULT_TOKEN = '#';

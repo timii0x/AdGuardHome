@@ -7,6 +7,7 @@ import i18next from 'i18next';
 import { clearDnsCache } from '../../../../actions/dnsConfig';
 import {
     CACHE_CONFIG_FIELDS,
+    CACHE_OPTIMISTIC_PREFETCH_KEEP_DAYS,
     CACHE_OPTIMISTIC_PREFETCH_MODES,
     UINT32_RANGE,
 } from '../../../../helpers/constants';
@@ -42,6 +43,7 @@ type FormData = {
     cache_ttl_max: number;
     cache_optimistic: boolean;
     cache_optimistic_prefetch_mode: string;
+    cache_optimistic_prefetch_keep_days: number;
 };
 
 type CacheFormProps = {
@@ -71,6 +73,7 @@ const Form = ({ initialValues, onSubmit }: CacheFormProps) => {
             cache_optimistic: initialValues?.cache_optimistic || false,
             cache_optimistic_prefetch_mode:
                 initialValues?.cache_optimistic_prefetch_mode || CACHE_OPTIMISTIC_PREFETCH_MODES.all,
+            cache_optimistic_prefetch_keep_days: initialValues?.cache_optimistic_prefetch_keep_days || 5,
         },
     });
 
@@ -191,6 +194,29 @@ const Form = ({ initialValues, onSubmit }: CacheFormProps) => {
                                 <option value={CACHE_OPTIMISTIC_PREFETCH_MODES.hits_5_per_hour}>
                                     {t('cache_optimistic_prefetch_hits_5')}
                                 </option>
+                            </select>
+
+                            <label
+                                htmlFor={CACHE_CONFIG_FIELDS.cache_optimistic_prefetch_keep_days}
+                                className="form__label form__label--with-desc mt-3">
+                                {t('cache_optimistic_prefetch_keep_days')}
+                            </label>
+                            <div className="form__desc form__desc--top">
+                                {t('cache_optimistic_prefetch_keep_days_desc')}
+                            </div>
+                            <select
+                                id={CACHE_CONFIG_FIELDS.cache_optimistic_prefetch_keep_days}
+                                data-testid="dns_cache_optimistic_prefetch_keep_days"
+                                className="form-control custom-select"
+                                disabled={processingSetConfig}
+                                {...register('cache_optimistic_prefetch_keep_days', {
+                                    setValueAs: (value) => Number(value),
+                                })}>
+                                {CACHE_OPTIMISTIC_PREFETCH_KEEP_DAYS.map((days) => (
+                                    <option key={days} value={days}>
+                                        {t(`cache_optimistic_prefetch_keep_days_${days}`)}
+                                    </option>
+                                ))}
                             </select>
                         </div>
                     </div>

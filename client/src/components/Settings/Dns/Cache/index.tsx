@@ -20,6 +20,7 @@ const CacheConfig = () => {
         cache_ttl_min,
         cache_optimistic,
         cache_optimistic_prefetch_mode,
+        cache_optimistic_prefetch_keep_days,
     } = useSelector(
         (state: RootState) => state.dnsConfig,
         shallowEqual,
@@ -45,6 +46,8 @@ const CacheConfig = () => {
                         cache_ttl_min: replaceZeroWithEmptyString(cache_ttl_min),
                         cache_optimistic,
                         cache_optimistic_prefetch_mode,
+                        cache_optimistic_prefetch_keep_days:
+                            replaceZeroWithEmptyString(cache_optimistic_prefetch_keep_days),
                     }}
                     onSubmit={handleFormSubmit}
                 />

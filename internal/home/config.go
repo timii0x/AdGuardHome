@@ -476,6 +476,7 @@ var config = &configuration{
 			}},
 			CacheEnabled:             true,
 			CacheSize:                4 * 1024 * 1024,
+			CacheOptimisticPrefetchKeepDays: 5,
 			CacheOptimisticAnswerTTL: timeutil.Duration(30 * time.Second),
 			CacheOptimisticMaxAge:    timeutil.Duration(12 * time.Hour),
 

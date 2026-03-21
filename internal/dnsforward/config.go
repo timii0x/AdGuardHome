@@ -127,6 +127,10 @@ type Config struct {
 	// background prefetching when optimistic cache is enabled.
 	CacheOptimisticPrefetchMode cacheOptimisticPrefetchMode `yaml:"cache_optimistic_prefetch_mode,omitempty"`
 
+	// CacheOptimisticPrefetchKeepDays defines how many days to keep refreshing
+	// domains in background since the last seen request.
+	CacheOptimisticPrefetchKeepDays uint32 `yaml:"cache_optimistic_prefetch_keep_days,omitempty"`
+
 	// CacheOptimisticAnswerTTL is the default TTL for expired cached responses.
 	CacheOptimisticAnswerTTL timeutil.Duration `yaml:"cache_optimistic_answer_ttl"`
 
