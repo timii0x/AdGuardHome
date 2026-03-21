@@ -179,7 +179,7 @@ func (s *Server) getDNSConfig(ctx context.Context) (c *jsonDNSConfig) {
 	cacheMinTTL := s.conf.CacheMinTTL
 	cacheMaxTTL := s.conf.CacheMaxTTL
 	cacheOptimistic := s.conf.CacheOptimistic
-	cacheOptimisticPrefetchMode := normalizePrefetchMode(s.conf.CacheOptimisticPrefetchMode)
+	prefetchMode := normalizePrefetchMode(s.conf.CacheOptimisticPrefetchMode)
 	cacheOptimisticPrefetchKeepDays := normalizePrefetchKeepDays(s.conf.CacheOptimisticPrefetchKeepDays)
 	resolveClients := s.conf.AddrProcConf.UseRDNS
 	usePrivateRDNS := s.conf.UsePrivateRDNS
@@ -187,8 +187,8 @@ func (s *Server) getDNSConfig(ctx context.Context) (c *jsonDNSConfig) {
 
 	var cacheOptimisticPrefetchModePtr *cacheOptimisticPrefetchMode
 	var cacheOptimisticPrefetchKeepDaysPtr *uint32
-	if cacheOptimisticPrefetchMode != cacheOptimisticPrefetchModeDisabled {
-		cacheOptimisticPrefetchModePtr = &cacheOptimisticPrefetchMode
+	if prefetchMode != cacheOptimisticPrefetchModeDisabled {
+		cacheOptimisticPrefetchModePtr = &prefetchMode
 		cacheOptimisticPrefetchKeepDaysPtr = &cacheOptimisticPrefetchKeepDays
 	}
 
