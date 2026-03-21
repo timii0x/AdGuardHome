@@ -11,14 +11,19 @@
 
 set -eu
 
-AGH_REPO_URL="${AGH_REPO_URL:-}"
-AGH_REPO_BRANCH="${AGH_REPO_BRANCH:-master}"
+AGH_REPO_URL_INPUT="${AGH_REPO_URL-}"
+AGH_REPO_BRANCH_INPUT="${AGH_REPO_BRANCH-}"
+AGH_SOURCE_DIR_INPUT="${AGH_SOURCE_DIR-}"
+
+AGH_REPO_URL="${AGH_REPO_URL_INPUT:-}"
+AGH_REPO_BRANCH="${AGH_REPO_BRANCH_INPUT:-master}"
 AGH_UPSTREAM_URL="${AGH_UPSTREAM_URL:-https://github.com/AdguardTeam/AdGuardHome.git}"
 AGH_UPSTREAM_BRANCH="${AGH_UPSTREAM_BRANCH:-master}"
 AGH_SYNC_UPSTREAM="${AGH_SYNC_UPSTREAM:-1}"
 AGH_AUTO_INSTALL_DEPS="${AGH_AUTO_INSTALL_DEPS:-1}"
+AGH_AUTO_STASH_LOCAL_CHANGES="${AGH_AUTO_STASH_LOCAL_CHANGES:-1}"
 AGH_SKIP_IF_NO_UPDATES="${AGH_SKIP_IF_NO_UPDATES:-1}"
-AGH_SOURCE_DIR="${AGH_SOURCE_DIR:-/usr/local/src/agh-custom}"
+AGH_SOURCE_DIR="${AGH_SOURCE_DIR_INPUT:-/usr/local/src/agh-custom}"
 AGH_INSTALL_DIR="${AGH_INSTALL_DIR:-/opt/AdGuardHome}"
 AGH_SERVICE_NAME="${AGH_SERVICE_NAME:-AdGuardHome}"
 AGH_BACKUP_DIR="${AGH_BACKUP_DIR:-$AGH_INSTALL_DIR/backups}"
@@ -54,6 +59,35 @@ json_value() {
     fi
 
     sed -n "s/.*\"$key\"[[:space:]]*:[[:space:]]*\"\\([^\"]*\\)\".*/\\1/p" "$file" | head -n 1
+}
+
+load_saved_config() {
+    [ -f "$AGH_STATE_FILE" ] || return 0
+
+    if [ -z "$AGH_SOURCE_DIR_INPUT" ]; then
+        state_source_dir="$(json_value source_dir "$AGH_STATE_FILE")"
+        [ -n "$state_source_dir" ] && AGH_SOURCE_DIR="$state_source_dir"
+    fi
+
+    if [ -z "$AGH_REPO_BRANCH_INPUT" ]; then
+        state_branch="$(json_value branch "$AGH_STATE_FILE")"
+        [ -n "$state_branch" ] && AGH_REPO_BRANCH="$state_branch"
+    fi
+
+    if [ -z "$AGH_REPO_URL_INPUT" ]; then
+        state_repo_url="$(json_value repo_url "$AGH_STATE_FILE")"
+        [ -n "$state_repo_url" ] && AGH_REPO_URL="$state_repo_url"
+    fi
+}
+
+stash_local_changes_if_needed() {
+    [ "$AGH_AUTO_STASH_LOCAL_CHANGES" = "1" ] || return 0
+
+    if [ -n "$(git status --porcelain --untracked-files=normal 2>/dev/null || true)" ]; then
+        stash_name="agh-auto-stash-$(date '+%Y%m%d-%H%M%S')"
+        log "Local repo changes detected, stashing as $stash_name ..."
+        git stash push --include-untracked -m "$stash_name" >/dev/null
+    fi
 }
 
 require_root() {
@@ -147,6 +181,7 @@ clone_or_update_repo() {
     fi
 
     cd "$AGH_SOURCE_DIR"
+    stash_local_changes_if_needed
 
     if [ -n "$AGH_REPO_URL" ]; then
         git remote set-url origin "$AGH_REPO_URL"
@@ -171,7 +206,9 @@ clone_or_update_repo() {
         fi
 
         if [ -n "$AGH_REPO_URL" ]; then
-            git push origin "$AGH_REPO_BRANCH"
+            if ! git push origin "$AGH_REPO_BRANCH"; then
+                log "WARNING: Could not push synced branch to origin. Continuing with local build."
+            fi
         fi
     fi
 }
@@ -230,6 +267,8 @@ install_tooling() {
 #!/bin/sh
 set -eu
 AGH_MANAGER_PATH="${AGH_MANAGER_PATH:-/usr/local/sbin/agh-custom-manager}"
+AGH_SYNC_UPSTREAM=1
+export AGH_SYNC_UPSTREAM
 exec "$AGH_MANAGER_PATH" apply
 EOF
     chmod 0755 "$AGH_UPDATE_CMD_PATH"
@@ -320,6 +359,7 @@ upgrade_existing() {
 
 apply_update() {
     require_root
+    load_saved_config
     ensure_dependencies
     require_cmd systemctl
     require_cmd install
@@ -458,6 +498,7 @@ Environment (important):
   AGH_REPO_BRANCH     Fork branch to build (default: master)
   AGH_SYNC_UPSTREAM   1=sync from upstream before build (default: 1)
   AGH_AUTO_INSTALL_DEPS 1=install missing build deps automatically (default: 1)
+  AGH_AUTO_STASH_LOCAL_CHANGES 1=stash local repo changes before pull (default: 1)
   AGH_SKIP_IF_NO_UPDATES 1=skip rebuild when fork revision is unchanged (default: 1)
   AGH_UPSTREAM_BRANCH Upstream branch (default: master)
 EOF

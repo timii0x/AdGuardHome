@@ -21,15 +21,16 @@ Status endpoint command:
   - checks if AGH is installed
   - installs missing build dependencies automatically (`go`, `npm`, `git`, `make`) on apt/dnf/yum/apk
   - clones/updates your fork
-  - optionally fast-forwards from upstream
+  - fast-forwards from upstream by default (`AGH_SYNC_UPSTREAM=1`)
   - builds AGH with version from `git describe` (avoids `v0.0.0-dev`)
   - installs/upgrades `/opt/AdGuardHome/AdGuardHome`
   - restarts service with rollback on failure
   - installs helper commands into `/usr/local/sbin`
+  - auto-stashes local git changes before pull (`AGH_AUTO_STASH_LOCAL_CHANGES=1`, default)
   - skips rebuild/restart when no fork updates are detected (`AGH_SKIP_IF_NO_UPDATES=1`, default)
 
 - `agh-custom-update.sh`:
-  - tiny wrapper that runs manager `apply`
+  - tiny wrapper that runs manager `apply` with upstream sync enabled
 
 - `agh-custom-status` (installed by manager):
   - tiny wrapper that runs manager `status`
@@ -50,6 +51,7 @@ After first run:
 - `/usr/local/sbin/agh-custom-update` will exist
 - `/usr/local/sbin/agh-custom-status` will exist
 - Panel `Custom update` button will call this command via `/control/custom_update`
+- Next updates can run without extra env vars (`/usr/local/sbin/agh-custom-update` or panel button)
 
 ## Notes
 
@@ -57,4 +59,5 @@ After first run:
 - If upstream sync has conflicts, the script exits and keeps current running binary.
 - Auto dependency install is enabled by default (`AGH_AUTO_INSTALL_DEPS=1`).
 - Set `AGH_AUTO_INSTALL_DEPS=0` if you want strict/manual dependency management.
+- Auto stash is enabled by default (`AGH_AUTO_STASH_LOCAL_CHANGES=1`).
 - Rebuild skip is enabled by default (`AGH_SKIP_IF_NO_UPDATES=1`).
