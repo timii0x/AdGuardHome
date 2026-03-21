@@ -23,6 +23,8 @@ AGH_SERVICE_NAME="${AGH_SERVICE_NAME:-AdGuardHome}"
 AGH_BACKUP_DIR="${AGH_BACKUP_DIR:-$AGH_INSTALL_DIR/backups}"
 AGH_MANAGER_PATH="${AGH_MANAGER_PATH:-/usr/local/sbin/agh-custom-manager}"
 AGH_UPDATE_CMD_PATH="${AGH_UPDATE_CMD_PATH:-/usr/local/sbin/agh-custom-update}"
+AGH_STATUS_CMD_PATH="${AGH_STATUS_CMD_PATH:-/usr/local/sbin/agh-custom-status}"
+AGH_STATE_FILE="${AGH_STATE_FILE:-$AGH_INSTALL_DIR/custom-build-info.json}"
 
 case "$0" in
     /*) AGH_SELF_PATH="$0" ;;
@@ -36,6 +38,21 @@ log() {
 fail() {
     log "ERROR: $*"
     exit 1
+}
+
+json_escape() {
+    printf '%s' "${1:-}" | sed 's/\\/\\\\/g; s/"/\\"/g'
+}
+
+json_value() {
+    key="$1"
+    file="$2"
+
+    if [ ! -f "$file" ]; then
+        return 0
+    fi
+
+    sed -n "s/.*\"$key\"[[:space:]]*:[[:space:]]*\"\\([^\"]*\\)\".*/\\1/p" "$file" | head -n 1
 }
 
 require_root() {
@@ -167,7 +184,7 @@ build_binary() {
 
 install_tooling() {
     log "Installing helper commands ..."
-    mkdir -p "$(dirname "$AGH_MANAGER_PATH")"
+    mkdir -p "$(dirname "$AGH_MANAGER_PATH")" "$(dirname "$AGH_UPDATE_CMD_PATH")" "$(dirname "$AGH_STATUS_CMD_PATH")"
     install -m 0755 "$AGH_SELF_PATH" "$AGH_MANAGER_PATH"
 
     cat >"$AGH_UPDATE_CMD_PATH" <<'EOF'
@@ -177,6 +194,36 @@ AGH_MANAGER_PATH="${AGH_MANAGER_PATH:-/usr/local/sbin/agh-custom-manager}"
 exec "$AGH_MANAGER_PATH" apply
 EOF
     chmod 0755 "$AGH_UPDATE_CMD_PATH"
+
+    cat >"$AGH_STATUS_CMD_PATH" <<'EOF'
+#!/bin/sh
+set -eu
+AGH_MANAGER_PATH="${AGH_MANAGER_PATH:-/usr/local/sbin/agh-custom-manager}"
+exec "$AGH_MANAGER_PATH" status
+EOF
+    chmod 0755 "$AGH_STATUS_CMD_PATH"
+}
+
+write_build_info() {
+    source_dir_esc="$(json_escape "$AGH_SOURCE_DIR")"
+    branch_esc="$(json_escape "$AGH_REPO_BRANCH")"
+    repo_url_esc="$(json_escape "$AGH_REPO_URL")"
+    installed_commit="$(git -C "$AGH_SOURCE_DIR" rev-parse HEAD 2>/dev/null || true)"
+    installed_revision="$(git -C "$AGH_SOURCE_DIR" rev-parse --short HEAD 2>/dev/null || true)"
+    installed_commit_esc="$(json_escape "$installed_commit")"
+    installed_revision_esc="$(json_escape "$installed_revision")"
+    updated_at_esc="$(json_escape "$(date -u '+%Y-%m-%dT%H:%M:%SZ')")"
+
+    cat >"$AGH_STATE_FILE" <<EOF
+{
+  "source_dir": "$source_dir_esc",
+  "branch": "$branch_esc",
+  "repo_url": "$repo_url_esc",
+  "installed_commit": "$installed_commit_esc",
+  "installed_revision": "$installed_revision_esc",
+  "updated_at": "$updated_at_esc"
+}
+EOF
 }
 
 install_fresh() {
@@ -246,7 +293,93 @@ apply_update() {
         install_fresh "$AGH_SOURCE_DIR/AdGuardHome"
     fi
 
+    write_build_info
+
     log "Custom AGH update finished successfully."
+}
+
+status_json() {
+    fork_configured=false
+    update_available=false
+    source_dir="$AGH_SOURCE_DIR"
+    branch="$AGH_REPO_BRANCH"
+    installed_revision=""
+    installed_commit=""
+    remote_revision=""
+    remote_commit=""
+    status_error=""
+
+    if [ -f "$AGH_STATE_FILE" ]; then
+        fork_configured=true
+
+        state_source_dir="$(json_value source_dir "$AGH_STATE_FILE")"
+        state_branch="$(json_value branch "$AGH_STATE_FILE")"
+
+        [ -n "$state_source_dir" ] && source_dir="$state_source_dir"
+        [ -n "$state_branch" ] && branch="$state_branch"
+
+        installed_revision="$(json_value installed_revision "$AGH_STATE_FILE")"
+        installed_commit="$(json_value installed_commit "$AGH_STATE_FILE")"
+    fi
+
+    if command -v git >/dev/null 2>&1 && [ -d "$source_dir/.git" ]; then
+        fork_configured=true
+
+        if git -C "$source_dir" fetch --quiet origin "$branch" >/dev/null 2>&1; then
+            remote_revision="$(git -C "$source_dir" rev-parse --short "origin/$branch" 2>/dev/null || true)"
+            remote_commit="$(git -C "$source_dir" rev-parse "origin/$branch" 2>/dev/null || true)"
+        else
+            status_error="Cannot fetch origin/$branch"
+        fi
+    fi
+
+    compare_commit="$installed_commit"
+    if [ -z "$compare_commit" ] && command -v git >/dev/null 2>&1 && [ -d "$source_dir/.git" ]; then
+        compare_commit="$(git -C "$source_dir" rev-parse HEAD 2>/dev/null || true)"
+    fi
+
+    if [ -n "$remote_commit" ] && [ -n "$compare_commit" ] && [ "$remote_commit" != "$compare_commit" ]; then
+        update_available=true
+    fi
+
+    [ -n "$installed_revision" ] || installed_revision="-"
+    [ -n "$remote_revision" ] || remote_revision="-"
+
+    source_dir_esc="$(json_escape "$source_dir")"
+    branch_esc="$(json_escape "$branch")"
+    installed_revision_esc="$(json_escape "$installed_revision")"
+    remote_revision_esc="$(json_escape "$remote_revision")"
+    status_error_esc="$(json_escape "$status_error")"
+
+    if [ "$fork_configured" = true ]; then
+        fork_bool=true
+    else
+        fork_bool=false
+    fi
+
+    if [ "$update_available" = true ]; then
+        update_bool=true
+    else
+        update_bool=false
+    fi
+
+    if [ -n "$status_error_esc" ]; then
+        error_json="\"$status_error_esc\""
+    else
+        error_json="\"\""
+    fi
+
+    cat <<EOF
+{
+  "fork_configured": $fork_bool,
+  "source_dir": "$source_dir_esc",
+  "branch": "$branch_esc",
+  "installed_revision": "$installed_revision_esc",
+  "remote_revision": "$remote_revision_esc",
+  "update_available": $update_bool,
+  "error": $error_json
+}
+EOF
 }
 
 usage() {
@@ -254,6 +387,7 @@ usage() {
 Usage:
   $0 apply
   $0 install-tools
+  $0 status
 
 Environment (important):
   AGH_REPO_URL        Your fork URL (required on first run)
@@ -272,6 +406,9 @@ case "$cmd" in
     install-tools)
         require_root
         install_tooling
+        ;;
+    status)
+        status_json
         ;;
     *)
         usage

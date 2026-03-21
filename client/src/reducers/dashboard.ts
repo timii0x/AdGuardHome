@@ -110,6 +110,26 @@ const dashboard = handleActions(
             return newState;
         },
 
+        [actions.getCustomUpdateStatusRequest.toString()]: (state: any) => ({
+            ...state,
+            processingCustomUpdateStatus: true,
+        }),
+        [actions.getCustomUpdateStatusFailure.toString()]: (state: any) => ({
+            ...state,
+            processingCustomUpdateStatus: false,
+        }),
+        [actions.getCustomUpdateStatusSuccess.toString()]: (state: any, { payload }: any) => ({
+            ...state,
+            processingCustomUpdateStatus: false,
+            customUpdateForkConfigured: !!payload?.fork_configured,
+            customUpdateSourceDir: payload?.source_dir || '',
+            customUpdateBranch: payload?.branch || '',
+            customUpdateInstalledRevision: payload?.installed_revision || '',
+            customUpdateRemoteRevision: payload?.remote_revision || '',
+            customUpdateAvailable: !!payload?.update_available,
+            customUpdateStatusError: payload?.error || '',
+        }),
+
         [actions.toggleProtectionRequest.toString()]: (state: any) => ({
             ...state,
             processingProtection: true,
@@ -176,6 +196,7 @@ const dashboard = handleActions(
         processingVersion: true,
         processingClients: true,
         processingUpdate: false,
+        processingCustomUpdateStatus: false,
         processingProfile: true,
         protectionEnabled: false,
         protectionDisabledDuration: null,
@@ -192,6 +213,13 @@ const dashboard = handleActions(
         name: '',
         theme: undefined,
         checkUpdateFlag: false,
+        customUpdateForkConfigured: false,
+        customUpdateSourceDir: '',
+        customUpdateBranch: '',
+        customUpdateInstalledRevision: '',
+        customUpdateRemoteRevision: '',
+        customUpdateAvailable: false,
+        customUpdateStatusError: '',
     },
 );
 

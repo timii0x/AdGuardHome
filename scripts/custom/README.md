@@ -3,11 +3,17 @@
 This folder adds a panel button (`Custom update`) and a backend endpoint:
 
 - `POST /control/custom_update`
+- `GET /control/custom_update_status`
 
 The endpoint runs an external command:
 
 - default: `/usr/local/sbin/agh-custom-update`
 - override with env var: `AGH_CUSTOM_UPDATE_CMD`
+
+Status endpoint command:
+
+- default: `/usr/local/sbin/agh-custom-status`
+- override with env var: `AGH_CUSTOM_UPDATE_STATUS_CMD`
 
 ## Scripts
 
@@ -24,6 +30,9 @@ The endpoint runs an external command:
 - `agh-custom-update.sh`:
   - tiny wrapper that runs manager `apply`
 
+- `agh-custom-status` (installed by manager):
+  - tiny wrapper that runs manager `status`
+
 ## First setup
 
 Run as root:
@@ -38,6 +47,7 @@ After first run:
 
 - `/usr/local/sbin/agh-custom-manager` will exist
 - `/usr/local/sbin/agh-custom-update` will exist
+- `/usr/local/sbin/agh-custom-status` will exist
 - Panel `Custom update` button will call this command via `/control/custom_update`
 
 ## Notes

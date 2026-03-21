@@ -283,6 +283,38 @@ export const getCustomUpdate = () => async (dispatch: any, getState: any) => {
     }
 };
 
+export const getCustomUpdateStatusRequest = createAction('GET_CUSTOM_UPDATE_STATUS_REQUEST');
+export const getCustomUpdateStatusFailure = createAction('GET_CUSTOM_UPDATE_STATUS_FAILURE');
+export const getCustomUpdateStatusSuccess = createAction('GET_CUSTOM_UPDATE_STATUS_SUCCESS');
+
+export const getCustomUpdateStatus =
+    (showToast = false) =>
+    async (dispatch: any) => {
+        dispatch(getCustomUpdateStatusRequest());
+
+        try {
+            const data = await apiClient.getCustomUpdateStatus();
+            dispatch(getCustomUpdateStatusSuccess(data));
+
+            if (showToast) {
+                if (data?.error) {
+                    dispatch(addNoticeToast({ error: 'custom_update_status_failed' }));
+                } else if (data?.fork_configured && data?.update_available) {
+                    dispatch(addSuccessToast('custom_updates_checked_available'));
+                } else if (data?.fork_configured) {
+                    dispatch(addSuccessToast('custom_updates_checked_up_to_date'));
+                } else {
+                    dispatch(addNoticeToast({ error: 'custom_update_not_configured' }));
+                }
+            }
+        } catch (error) {
+            dispatch(getCustomUpdateStatusFailure());
+            if (showToast) {
+                dispatch(addErrorToast({ error: 'custom_update_status_failed' }));
+            }
+        }
+    };
+
 export const getClientsRequest = createAction('GET_CLIENTS_REQUEST');
 export const getClientsFailure = createAction('GET_CLIENTS_FAILURE');
 export const getClientsSuccess = createAction('GET_CLIENTS_SUCCESS');
@@ -347,6 +379,7 @@ export const getDnsStatus = () => async (dispatch: any) => {
         if (runningStatus === true) {
             dispatch(dnsStatusSuccess(dnsStatus));
             dispatch(getVersion());
+            dispatch(getCustomUpdateStatus());
             dispatch(getTlsStatus());
             dispatch(getProfile());
         } else {

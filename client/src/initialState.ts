@@ -119,6 +119,7 @@ export type DashboardData = {
     processingVersion: boolean;
     processingClients: boolean;
     processingUpdate: boolean;
+    processingCustomUpdateStatus: boolean;
     processingProfile: boolean;
     protectionEnabled: boolean;
     protectionDisabledDuration: any;
@@ -135,6 +136,13 @@ export type DashboardData = {
     name: string;
     theme: string | null;
     checkUpdateFlag: boolean;
+    customUpdateForkConfigured: boolean;
+    customUpdateSourceDir: string;
+    customUpdateBranch: string;
+    customUpdateInstalledRevision: string;
+    customUpdateRemoteRevision: string;
+    customUpdateAvailable: boolean;
+    customUpdateStatusError: string;
     announcementUrl: string;
     newVersion: string;
     canAutoUpdate: boolean;
@@ -442,6 +450,7 @@ export const initialState: RootState = {
         processingVersion: true,
         processingClients: true,
         processingUpdate: false,
+        processingCustomUpdateStatus: false,
         processingProfile: true,
         protectionEnabled: false,
         protectionDisabledDuration: null,
@@ -458,6 +467,13 @@ export const initialState: RootState = {
         name: '',
         theme: undefined,
         checkUpdateFlag: false,
+        customUpdateForkConfigured: false,
+        customUpdateSourceDir: '',
+        customUpdateBranch: '',
+        customUpdateInstalledRevision: '',
+        customUpdateRemoteRevision: '',
+        customUpdateAvailable: false,
+        customUpdateStatusError: '',
         announcementUrl: '',
         newVersion: '',
         canAutoUpdate: false,

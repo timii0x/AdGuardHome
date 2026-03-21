@@ -169,3 +169,10 @@
         0.3s ease-in-out background-color,
         0.3s ease-in-out color;
 }
+
+.settings-update-meta {
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: var(--scolor);
+    line-height: 1.5;
+}

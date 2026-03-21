@@ -49,6 +49,8 @@ interface SettingsProps {
     setFiltersConfig: (...args: unknown[]) => unknown;
     getFilteringStatus: (...args: unknown[]) => unknown;
     getCustomUpdate: (...args: unknown[]) => unknown;
+    getCustomUpdateStatus: (...args: unknown[]) => unknown;
+    getVersion: (...args: unknown[]) => unknown;
     t: (...args: unknown[]) => string;
     getLogsConfig?: (...args: unknown[]) => unknown;
     setLogsConfig?: (...args: unknown[]) => unknown;
@@ -80,7 +82,15 @@ interface SettingsProps {
         processingSetConfig?: boolean;
     };
     dashboard?: {
+        dnsVersion?: string;
+        processingVersion?: boolean;
         processingUpdate?: boolean;
+        processingCustomUpdateStatus?: boolean;
+        customUpdateForkConfigured?: boolean;
+        customUpdateInstalledRevision?: string;
+        customUpdateRemoteRevision?: string;
+        customUpdateAvailable?: boolean;
+        customUpdateStatusError?: string;
     };
 }
 
@@ -167,16 +177,40 @@ class Settings extends Component<SettingsProps> {
             filtering,
             setFiltersConfig,
             getCustomUpdate,
+            getCustomUpdateStatus,
+            getVersion,
             dashboard,
             t,
         } = this.props;
 
         const isDataReady = !settings.processing && !stats.processingGetConfig && !queryLogs.processingGetConfig;
+        const dnsVersion = dashboard?.dnsVersion || '-';
         const processingUpdate = !!dashboard?.processingUpdate;
+        const processingVersion = !!dashboard?.processingVersion;
+        const processingCustomUpdateStatus = !!dashboard?.processingCustomUpdateStatus;
+        const processingCheckUpdates = processingVersion || processingCustomUpdateStatus;
+        const forkConfigured = !!dashboard?.customUpdateForkConfigured;
+        const forkInstalledRevision = dashboard?.customUpdateInstalledRevision || '-';
+        const forkRemoteRevision = dashboard?.customUpdateRemoteRevision || '-';
+        const forkStatus = !forkConfigured
+            ? t('custom_update_not_configured')
+            : dashboard?.customUpdateAvailable
+              ? t('custom_update_available')
+              : t('custom_update_up_to_date');
 
         return (
             <Fragment>
                 <PageTitle title={t('general_settings')}>
+                    <button
+                        type="button"
+                        className="btn btn-outline-primary btn-sm mr-2"
+                        onClick={() => {
+                            getVersion(true);
+                            getCustomUpdateStatus(true);
+                        }}
+                        disabled={processingCheckUpdates}>
+                        <Trans>check_updates_btn</Trans>
+                    </button>
                     <button
                         type="button"
                         className="btn btn-outline-primary btn-sm"
@@ -185,6 +219,26 @@ class Settings extends Component<SettingsProps> {
                         <Trans>update_custom</Trans>
                     </button>
                 </PageTitle>
+
+                <div className="settings-update-meta">
+                    <div>
+                        <strong>AGH:</strong> {dnsVersion}
+                    </div>
+                    <div>
+                        <strong>{t('custom_fork_version')}:</strong> {forkInstalledRevision}
+                    </div>
+                    <div>
+                        <strong>{t('custom_fork_remote_version')}:</strong> {forkRemoteRevision}
+                    </div>
+                    <div>
+                        <strong>{t('status')}:</strong> {forkStatus}
+                    </div>
+                    {dashboard?.customUpdateStatusError && (
+                        <div className="form__desc mt-1">
+                            {t('custom_update_status_error')}: {dashboard.customUpdateStatusError}
+                        </div>
+                    )}
+                </div>
 
                 {!isDataReady && <Loading />}
 
