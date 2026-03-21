@@ -202,7 +202,8 @@ class Settings extends Component<SettingsProps> {
         const forkInstalledRevision = dashboard?.customUpdateInstalledRevision || '-';
         const forkRemoteRevision = dashboard?.customUpdateRemoteRevision || '-';
         const forkUpdateAvailable = !!dashboard?.customUpdateAvailable;
-        const canRunForkUpdate = forkConfigured && (forkUpdateAvailable || !!dashboard?.customUpdateStatusError);
+        const canRunCustomUpdate =
+            forkConfigured && (forkUpdateAvailable || aghUpdateAvailable || !!dashboard?.customUpdateStatusError);
         const forkStatus = !forkConfigured
             ? t('custom_update_not_configured')
             : forkUpdateAvailable
@@ -226,7 +227,7 @@ class Settings extends Component<SettingsProps> {
                         type="button"
                         className="btn btn-outline-primary btn-sm"
                         onClick={() => getCustomUpdate()}
-                        disabled={processingUpdate || !canRunForkUpdate}>
+                        disabled={processingUpdate || !canRunCustomUpdate}>
                         <Trans>update_custom</Trans>
                     </button>
                     {aghUpdateAvailable && aghCanAutoUpdate && (
@@ -250,6 +251,9 @@ class Settings extends Component<SettingsProps> {
                     <div>
                         <strong>{t('status')}:</strong> {aghStatus}
                     </div>
+                    {aghUpdateAvailable && !aghCanAutoUpdate && (
+                        <div className="form__desc mt-1">{t('agh_use_custom_update_hint')}</div>
+                    )}
                     <div>
                         <strong>{t('custom_fork_version')}:</strong> {forkInstalledRevision}
                     </div>

@@ -753,6 +753,7 @@
   "agh_latest_version": "AGH najnovejša",
   "agh_update_available": "Na voljo je AGH posodobitev",
   "agh_up_to_date": "AGH je posodobljen",
+  "agh_use_custom_update_hint": "Samodejna posodobitev na tem strežniku ni na voljo, uporabite Custom update.",
   "update_failed": "Samodejna posodobitev ni uspela. Prosimo <a>sledite korakom</a>, da ročno posodobite.",
   "update_now": "Posodobi zdaj",
   "updated_custom_filtering_toast": "Pravila po meri so uspešno shranjena",

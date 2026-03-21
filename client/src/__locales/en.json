@@ -753,6 +753,7 @@
   "agh_latest_version": "AGH latest",
   "agh_update_available": "AGH update available",
   "agh_up_to_date": "AGH is up-to-date",
+  "agh_use_custom_update_hint": "Auto-update is unavailable on this host, use Custom update.",
   "update_failed": "Auto-update failed. Please <a>follow these steps</a> to update manually.",
   "update_now": "Update now",
   "updated_custom_filtering_toast": "Custom rules successfully saved",

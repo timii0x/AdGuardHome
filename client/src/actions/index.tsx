@@ -256,7 +256,22 @@ export const getUpdate = () => async (dispatch: any, getState: any) => {
 };
 
 export const getCustomUpdate = () => async (dispatch: any, getState: any) => {
-    const { dnsVersion, dnsStartTime } = getState().dashboard;
+    const {
+        dnsVersion,
+        dnsStartTime,
+        isUpdateAvailable,
+        customUpdateAvailable,
+        customUpdateForkConfigured,
+        customUpdateStatusError,
+    } = getState().dashboard;
+
+    // If both AGH and fork are already up-to-date, don't start a no-op update
+    // process that would otherwise end with a timeout toast.
+    if (!isUpdateAvailable && !customUpdateAvailable && customUpdateForkConfigured && !customUpdateStatusError) {
+        dispatch(addSuccessToast('custom_updates_checked_up_to_date'));
+
+        return;
+    }
 
     dispatch(getUpdateRequest());
     const handleRequestError = () => {

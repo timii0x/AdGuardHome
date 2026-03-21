@@ -391,8 +391,16 @@ status_json() {
         compare_commit="$(git -C "$source_dir" rev-parse HEAD 2>/dev/null || true)"
     fi
 
-    if [ -n "$remote_commit" ] && [ -n "$compare_commit" ] && [ "$remote_commit" != "$compare_commit" ]; then
-        update_available=true
+    if [ -n "$remote_commit" ] && [ -n "$compare_commit" ]; then
+        if [ "$remote_commit" = "$compare_commit" ]; then
+            update_available=false
+        elif git -C "$source_dir" merge-base --is-ancestor "$compare_commit" "$remote_commit" >/dev/null 2>&1; then
+            # Update is available only when remote is ahead of installed.
+            update_available=true
+        else
+            # Local build is ahead/diverged from origin; treat as no update.
+            update_available=false
+        fi
     fi
 
     [ -n "$installed_revision" ] || installed_revision="-"
