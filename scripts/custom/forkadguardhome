@@ -310,7 +310,7 @@ cmd_delete() {
 
     log "Restoring official AdGuard Home binary ..."
     curl -s -S -L https://raw.githubusercontent.com/AdguardTeam/AdGuardHome/master/scripts/install.sh |
-        sh -s -- -v
+        sh -s -- -r -v
 
     if [ "$KEEP_SOURCE_ON_DELETE" != "1" ] && [ -d "$SOURCE_DIR" ]; then
         log "Removing custom source directory: $SOURCE_DIR"
