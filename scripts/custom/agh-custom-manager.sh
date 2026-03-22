@@ -23,6 +23,7 @@ AGH_SYNC_UPSTREAM="${AGH_SYNC_UPSTREAM:-1}"
 AGH_AUTO_INSTALL_DEPS="${AGH_AUTO_INSTALL_DEPS:-1}"
 AGH_AUTO_STASH_LOCAL_CHANGES="${AGH_AUTO_STASH_LOCAL_CHANGES:-1}"
 AGH_SKIP_IF_NO_UPDATES="${AGH_SKIP_IF_NO_UPDATES:-1}"
+AGH_APPLY_LOCAL_PATCHES="${AGH_APPLY_LOCAL_PATCHES:-1}"
 AGH_SOURCE_DIR="${AGH_SOURCE_DIR_INPUT:-/usr/local/src/agh-custom}"
 AGH_INSTALL_DIR="${AGH_INSTALL_DIR:-/opt/AdGuardHome}"
 AGH_SERVICE_NAME="${AGH_SERVICE_NAME:-AdGuardHome}"
@@ -213,6 +214,20 @@ clone_or_update_repo() {
     fi
 }
 
+apply_local_patches() {
+    [ "$AGH_APPLY_LOCAL_PATCHES" = "1" ] || return 0
+
+    patch_script="$AGH_SOURCE_DIR/scripts/custom/apply-ttl10-prefetch-patch.sh"
+    if [ ! -x "$patch_script" ]; then
+        log "Local patch script not found/executable, skipping: $patch_script"
+
+        return 0
+    fi
+
+    log "Applying local custom patches ..."
+    "$patch_script" "$AGH_SOURCE_DIR"
+}
+
 build_binary() {
     build_version="$1"
     cd "$AGH_SOURCE_DIR"
@@ -247,6 +262,11 @@ should_skip_rebuild() {
     [ -n "$installed_commit" ] || return 1
     [ -n "$current_commit" ] || return 1
     [ "$installed_commit" = "$current_commit" ] || return 1
+
+    # If local uncommitted patches exist, force rebuild.
+    if [ -n "$(git -C "$AGH_SOURCE_DIR" status --porcelain --untracked-files=no 2>/dev/null || true)" ]; then
+        return 1
+    fi
 
     # Force one rebuild for older state files and old 0.0.0-style builds.
     [ -n "$installed_build_version" ] || return 1
@@ -380,6 +400,7 @@ apply_update() {
     require_cmd install
 
     clone_or_update_repo
+    apply_local_patches
     install_tooling
 
     if is_installed && should_skip_rebuild; then
