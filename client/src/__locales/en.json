@@ -749,6 +749,7 @@
   "custom_updates_checked_available": "A new version is available for your fork",
   "custom_updates_checked_up_to_date": "Your fork is up-to-date",
   "custom_fork_version": "Fork version",
+  "custom_fork_revision": "Fork revision",
   "custom_fork_remote_version": "Fork remote",
   "agh_latest_version": "AGH latest",
   "agh_update_available": "AGH update available",

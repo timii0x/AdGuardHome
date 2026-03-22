@@ -22,7 +22,7 @@ import {
     MANUAL_UPDATE_LINK,
     DISABLE_PROTECTION_TIMINGS,
 } from '../helpers/constants';
-import { areEqualVersions } from '../helpers/version';
+import { isVersionAtLeast } from '../helpers/version';
 import { getTlsStatus } from './encryption';
 import apiClient from '../api/Api';
 import { addErrorToast, addNoticeToast, addSuccessToast } from './toasts';
@@ -175,7 +175,7 @@ export const getVersion =
                 const { dnsVersion } = getState().dashboard;
                 const currentVersion = dnsVersion === 'undefined' ? 0 : dnsVersion;
 
-                if (data && !areEqualVersions(currentVersion, data.new_version)) {
+                if (data && !isVersionAtLeast(currentVersion, data.new_version)) {
                     dispatch(addSuccessToast('updates_checked'));
                 } else {
                     dispatch(addSuccessToast('updates_version_equal'));

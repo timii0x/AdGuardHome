@@ -1,7 +1,7 @@
 import { handleActions } from 'redux-actions';
 
 import * as actions from '../actions';
-import { areEqualVersions } from '../helpers/version';
+import { isVersionAtLeast } from '../helpers/version';
 import { STANDARD_DNS_PORT, STANDARD_WEB_PORT } from '../helpers/constants';
 
 const dashboard = handleActions(
@@ -68,7 +68,7 @@ const dashboard = handleActions(
         [actions.getVersionSuccess.toString()]: (state: any, { payload }: any) => {
             const currentVersion = state.dnsVersion === 'undefined' ? 0 : state.dnsVersion;
 
-            if (!payload.disabled && !areEqualVersions(currentVersion, payload.new_version)) {
+            if (!payload.disabled && !isVersionAtLeast(currentVersion, payload.new_version)) {
                 const {
                     announcement_url: announcementUrl,
                     new_version: newVersion,
@@ -130,6 +130,7 @@ const dashboard = handleActions(
             customUpdateForkConfigured: !!payload?.fork_configured,
             customUpdateSourceDir: payload?.source_dir || '',
             customUpdateBranch: payload?.branch || '',
+            customUpdateBuildVersion: payload?.build_version || '',
             customUpdateInstalledRevision: payload?.installed_revision || '',
             customUpdateRemoteRevision: payload?.remote_revision || '',
             customUpdateAvailable: !!payload?.update_available,
@@ -222,6 +223,7 @@ const dashboard = handleActions(
         customUpdateForkConfigured: false,
         customUpdateSourceDir: '',
         customUpdateBranch: '',
+        customUpdateBuildVersion: '',
         customUpdateInstalledRevision: '',
         customUpdateRemoteRevision: '',
         customUpdateAvailable: false,

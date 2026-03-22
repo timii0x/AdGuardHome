@@ -139,6 +139,7 @@ export type DashboardData = {
     customUpdateForkConfigured: boolean;
     customUpdateSourceDir: string;
     customUpdateBranch: string;
+    customUpdateBuildVersion: string;
     customUpdateInstalledRevision: string;
     customUpdateRemoteRevision: string;
     customUpdateAvailable: boolean;
@@ -470,6 +471,7 @@ export const initialState: RootState = {
         customUpdateForkConfigured: false,
         customUpdateSourceDir: '',
         customUpdateBranch: '',
+        customUpdateBuildVersion: '',
         customUpdateInstalledRevision: '',
         customUpdateRemoteRevision: '',
         customUpdateAvailable: false,

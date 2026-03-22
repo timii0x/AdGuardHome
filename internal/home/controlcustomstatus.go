@@ -33,6 +33,7 @@ type customUpdateStatusResponse struct {
 	ForkConfigured    bool   `json:"fork_configured"`
 	SourceDir         string `json:"source_dir,omitempty"`
 	Branch            string `json:"branch,omitempty"`
+	BuildVersion      string `json:"build_version,omitempty"`
 	InstalledRevision string `json:"installed_revision,omitempty"`
 	RemoteRevision    string `json:"remote_revision,omitempty"`
 	UpdateAvailable   bool   `json:"update_available"`

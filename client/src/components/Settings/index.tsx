@@ -91,6 +91,7 @@ interface SettingsProps {
         processingUpdate?: boolean;
         processingCustomUpdateStatus?: boolean;
         customUpdateForkConfigured?: boolean;
+        customUpdateBuildVersion?: string;
         customUpdateInstalledRevision?: string;
         customUpdateRemoteRevision?: string;
         customUpdateAvailable?: boolean;
@@ -199,6 +200,7 @@ class Settings extends Component<SettingsProps> {
         const aghLatestVersion = aghUpdateAvailable ? dashboard?.newVersion || '-' : dnsVersion;
         const aghStatus = aghUpdateAvailable ? t('agh_update_available') : t('agh_up_to_date');
         const forkConfigured = !!dashboard?.customUpdateForkConfigured;
+        const forkBuildVersion = dashboard?.customUpdateBuildVersion || '-';
         const forkInstalledRevision = dashboard?.customUpdateInstalledRevision || '-';
         const forkRemoteRevision = dashboard?.customUpdateRemoteRevision || '-';
         const forkUpdateAvailable = !!dashboard?.customUpdateAvailable;
@@ -255,7 +257,10 @@ class Settings extends Component<SettingsProps> {
                         <div className="form__desc mt-1">{t('agh_use_custom_update_hint')}</div>
                     )}
                     <div>
-                        <strong>{t('custom_fork_version')}:</strong> {forkInstalledRevision}
+                        <strong>{t('custom_fork_version')}:</strong> {forkBuildVersion}
+                    </div>
+                    <div>
+                        <strong>{t('custom_fork_revision')}:</strong> {forkInstalledRevision}
                     </div>
                     <div>
                         <strong>{t('custom_fork_remote_version')}:</strong> {forkRemoteRevision}

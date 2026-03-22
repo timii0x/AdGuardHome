@@ -17,7 +17,7 @@ const Version = () => {
     }
 
     const version = dashboard?.dnsVersion || install?.dnsVersion;
-    const forkVersion = dashboard?.customUpdateInstalledRevision || '-';
+    const forkVersion = dashboard?.customUpdateBuildVersion || dashboard?.customUpdateInstalledRevision || '-';
     const forkRemoteVersion = dashboard?.customUpdateRemoteRevision || '-';
     const isForkConfigured = !!dashboard?.customUpdateForkConfigured;
 

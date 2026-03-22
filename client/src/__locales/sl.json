@@ -749,6 +749,7 @@
   "custom_updates_checked_available": "Za vaš fork je na voljo nova različica",
   "custom_updates_checked_up_to_date": "Vaš fork je posodobljen",
   "custom_fork_version": "Fork verzija",
+  "custom_fork_revision": "Fork revizija",
   "custom_fork_remote_version": "Fork remote",
   "agh_latest_version": "AGH najnovejša",
   "agh_update_available": "Na voljo je AGH posodobitev",
