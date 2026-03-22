@@ -4,6 +4,19 @@ import * as actions from '../actions';
 import { isVersionAtLeast } from '../helpers/version';
 import { STANDARD_DNS_PORT, STANDARD_WEB_PORT } from '../helpers/constants';
 
+const getComparableVersion = (dnsVersion: any, customBuildVersion: any) => {
+    if (
+        typeof dnsVersion === 'string' &&
+        dnsVersion.startsWith('v0.0.0-dev') &&
+        typeof customBuildVersion === 'string' &&
+        customBuildVersion !== ''
+    ) {
+        return customBuildVersion;
+    }
+
+    return dnsVersion;
+};
+
 const dashboard = handleActions(
     {
         [actions.setDnsRunningStatus.toString()]: (state, { payload }: any) => ({
@@ -66,7 +79,8 @@ const dashboard = handleActions(
             processingVersion: false,
         }),
         [actions.getVersionSuccess.toString()]: (state: any, { payload }: any) => {
-            const currentVersion = state.dnsVersion === 'undefined' ? 0 : state.dnsVersion;
+            const baseVersion = state.dnsVersion === 'undefined' ? 0 : state.dnsVersion;
+            const currentVersion = getComparableVersion(baseVersion, state.customUpdateBuildVersion);
 
             if (!payload.disabled && !isVersionAtLeast(currentVersion, payload.new_version)) {
                 const {
@@ -124,18 +138,31 @@ const dashboard = handleActions(
             ...state,
             processingCustomUpdateStatus: false,
         }),
-        [actions.getCustomUpdateStatusSuccess.toString()]: (state: any, { payload }: any) => ({
-            ...state,
-            processingCustomUpdateStatus: false,
-            customUpdateForkConfigured: !!payload?.fork_configured,
-            customUpdateSourceDir: payload?.source_dir || '',
-            customUpdateBranch: payload?.branch || '',
-            customUpdateBuildVersion: payload?.build_version || '',
-            customUpdateInstalledRevision: payload?.installed_revision || '',
-            customUpdateRemoteRevision: payload?.remote_revision || '',
-            customUpdateAvailable: !!payload?.update_available,
-            customUpdateStatusError: payload?.error || '',
-        }),
+        [actions.getCustomUpdateStatusSuccess.toString()]: (state: any, { payload }: any) => {
+            const customBuildVersion = payload?.build_version || '';
+            const currentVersion = getComparableVersion(state.dnsVersion, customBuildVersion);
+            const hasAghUpdate = !!state.newVersion && !isVersionAtLeast(currentVersion, state.newVersion);
+
+            return {
+                ...state,
+                processingCustomUpdateStatus: false,
+                customUpdateForkConfigured: !!payload?.fork_configured,
+                customUpdateSourceDir: payload?.source_dir || '',
+                customUpdateBranch: payload?.branch || '',
+                customUpdateBuildVersion: customBuildVersion,
+                customUpdateInstalledRevision: payload?.installed_revision || '',
+                customUpdateRemoteRevision: payload?.remote_revision || '',
+                customUpdateAvailable: !!payload?.update_available,
+                customUpdateStatusError: payload?.error || '',
+                isUpdateAvailable: hasAghUpdate,
+                ...(hasAghUpdate
+                    ? {}
+                    : {
+                          newVersion: '',
+                          announcementUrl: '',
+                      }),
+            };
+        },
 
         [actions.toggleProtectionRequest.toString()]: (state: any) => ({
             ...state,

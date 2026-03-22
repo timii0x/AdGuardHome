@@ -172,8 +172,14 @@ export const getVersion =
             dispatch(getVersionSuccess(data));
 
             if (recheck) {
-                const { dnsVersion } = getState().dashboard;
-                const currentVersion = dnsVersion === 'undefined' ? 0 : dnsVersion;
+                const { dnsVersion, customUpdateBuildVersion } = getState().dashboard;
+                const baseVersion = dnsVersion === 'undefined' ? 0 : dnsVersion;
+                const currentVersion =
+                    typeof baseVersion === 'string' &&
+                    baseVersion.startsWith('v0.0.0-dev') &&
+                    customUpdateBuildVersion
+                        ? customUpdateBuildVersion
+                        : baseVersion;
 
                 if (data && !isVersionAtLeast(currentVersion, data.new_version)) {
                     dispatch(addSuccessToast('updates_checked'));
@@ -393,8 +399,8 @@ export const getDnsStatus = () => async (dispatch: any) => {
         const runningStatus = dnsStatus && running;
         if (runningStatus === true) {
             dispatch(dnsStatusSuccess(dnsStatus));
-            dispatch(getVersion());
             dispatch(getCustomUpdateStatus());
+            dispatch(getVersion());
             dispatch(getTlsStatus());
             dispatch(getProfile());
         } else {

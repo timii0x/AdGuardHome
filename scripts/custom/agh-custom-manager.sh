@@ -217,7 +217,7 @@ build_binary() {
     build_version="$1"
     cd "$AGH_SOURCE_DIR"
     log "Building AdGuard Home (VERSION=$build_version) ..."
-    VERSION="$build_version" make build
+    make VERSION="$build_version" build
     [ -x "$AGH_SOURCE_DIR/AdGuardHome" ] || fail "Build finished but binary was not created."
 }
 
@@ -242,6 +242,7 @@ should_skip_rebuild() {
     installed_commit="$(json_value installed_commit "$AGH_STATE_FILE")"
     installed_build_version="$(json_value build_version "$AGH_STATE_FILE")"
     current_commit="$(git -C "$AGH_SOURCE_DIR" rev-parse HEAD 2>/dev/null || true)"
+    runtime_version="$("$AGH_INSTALL_DIR/AdGuardHome" --version 2>/dev/null | sed -n 's/.*version[[:space:]]\\(v[^[:space:]]*\\).*/\\1/p' | head -n 1 || true)"
 
     [ -n "$installed_commit" ] || return 1
     [ -n "$current_commit" ] || return 1
@@ -254,6 +255,20 @@ should_skip_rebuild() {
             return 1
             ;;
     esac
+
+    # Force rebuild if the currently running binary still has the generic dev
+    # version or does not match what we stored in state.
+    case "$runtime_version" in
+        v0.0.0-dev* | '')
+            return 1
+            ;;
+    esac
+
+    runtime_core="$(printf '%s' "$runtime_version" | sed -n 's/^v\\([0-9][0-9]*\\.[0-9][0-9]*\\.[0-9][0-9]*\\).*/\\1/p')"
+    state_core="$(printf '%s' "$installed_build_version" | sed -n 's/^v\\([0-9][0-9]*\\.[0-9][0-9]*\\.[0-9][0-9]*\\).*/\\1/p')"
+    if [ -n "$runtime_core" ] && [ -n "$state_core" ] && [ "$runtime_core" != "$state_core" ]; then
+        return 1
+    fi
 
     return 0
 }

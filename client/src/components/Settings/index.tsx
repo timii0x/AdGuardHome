@@ -190,17 +190,21 @@ class Settings extends Component<SettingsProps> {
         } = this.props;
 
         const isDataReady = !settings.processing && !stats.processingGetConfig && !queryLogs.processingGetConfig;
-        const dnsVersion = dashboard?.dnsVersion || '-';
+        const rawDnsVersion = dashboard?.dnsVersion || '-';
         const processingUpdate = !!dashboard?.processingUpdate;
         const processingVersion = !!dashboard?.processingVersion;
         const processingCustomUpdateStatus = !!dashboard?.processingCustomUpdateStatus;
         const processingCheckUpdates = processingVersion || processingCustomUpdateStatus;
         const aghUpdateAvailable = !!dashboard?.isUpdateAvailable;
         const aghCanAutoUpdate = !!dashboard?.canAutoUpdate;
-        const aghLatestVersion = aghUpdateAvailable ? dashboard?.newVersion || '-' : dnsVersion;
-        const aghStatus = aghUpdateAvailable ? t('agh_update_available') : t('agh_up_to_date');
         const forkConfigured = !!dashboard?.customUpdateForkConfigured;
         const forkBuildVersion = dashboard?.customUpdateBuildVersion || '-';
+        const dnsVersion =
+            typeof rawDnsVersion === 'string' && rawDnsVersion.startsWith('v0.0.0-dev') && forkBuildVersion !== '-'
+                ? forkBuildVersion
+                : rawDnsVersion;
+        const aghLatestVersion = aghUpdateAvailable ? dashboard?.newVersion || '-' : dnsVersion;
+        const aghStatus = aghUpdateAvailable ? t('agh_update_available') : t('agh_up_to_date');
         const forkInstalledRevision = dashboard?.customUpdateInstalledRevision || '-';
         const forkRemoteRevision = dashboard?.customUpdateRemoteRevision || '-';
         const forkUpdateAvailable = !!dashboard?.customUpdateAvailable;
@@ -219,8 +223,8 @@ class Settings extends Component<SettingsProps> {
                         type="button"
                         className="btn btn-outline-primary btn-sm mr-2"
                         onClick={() => {
-                            getVersion(true);
                             getCustomUpdateStatus(true);
+                            getVersion(true);
                         }}
                         disabled={processingCheckUpdates}>
                         <Trans>check_updates_btn</Trans>

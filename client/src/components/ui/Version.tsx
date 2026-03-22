@@ -16,14 +16,18 @@ const Version = () => {
         return null;
     }
 
-    const version = dashboard?.dnsVersion || install?.dnsVersion;
+    const rawVersion = dashboard?.dnsVersion || install?.dnsVersion;
     const forkVersion = dashboard?.customUpdateBuildVersion || dashboard?.customUpdateInstalledRevision || '-';
+    const version =
+        typeof rawVersion === 'string' && rawVersion.startsWith('v0.0.0-dev') && forkVersion !== '-'
+            ? forkVersion
+            : rawVersion;
     const forkRemoteVersion = dashboard?.customUpdateRemoteRevision || '-';
     const isForkConfigured = !!dashboard?.customUpdateForkConfigured;
 
     const onClick = () => {
-        dispatch(getVersion(true));
         dispatch(getCustomUpdateStatus(true));
+        dispatch(getVersion(true));
     };
 
     return (
