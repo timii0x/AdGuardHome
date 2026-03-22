@@ -4,6 +4,7 @@ set -euo pipefail
 
 DOMAIN="${1:-time.cloudflare.com}"
 AGH_DNS="${AGH_DNS:-127.0.0.1}"
+AGH_PORT="${AGH_PORT:-53}"
 UPSTREAM_IP="${UPSTREAM_IP:-1.1.1.1}"
 IFACE="${IFACE:-any}"
 CAPTURE_WINDOW="${CAPTURE_WINDOW:-30}"
@@ -21,16 +22,17 @@ FQDN="${DOMAIN%.}."
 echo "== Prefetch 10% TTL test =="
 echo "Domain:        ${FQDN}"
 echo "AGH DNS:       ${AGH_DNS}"
+echo "AGH Port:      ${AGH_PORT}"
 echo "Upstream IP:   ${UPSTREAM_IP}"
 echo "Interface:     ${IFACE}"
 echo
 
 echo "[1/5] Warming cache (A and AAAA)..."
-dig @"${AGH_DNS}" "${FQDN}" A +noall +answer >/dev/null
-dig @"${AGH_DNS}" "${FQDN}" AAAA +noall +answer >/dev/null || true
+dig @"${AGH_DNS}" -p "${AGH_PORT}" "${FQDN}" A +noall +answer >/dev/null
+dig @"${AGH_DNS}" -p "${AGH_PORT}" "${FQDN}" AAAA +noall +answer >/dev/null || true
 
 echo "[2/5] Reading current TTL from AGH response..."
-TTL="$(dig @"${AGH_DNS}" "${FQDN}" A +noall +answer | awk 'NR==1{print $2}')"
+TTL="$(dig @"${AGH_DNS}" -p "${AGH_PORT}" "${FQDN}" A +noall +answer | awk 'NR==1{print $2}')"
 if [[ -z "${TTL}" || ! "${TTL}" =~ ^[0-9]+$ ]]; then
     echo "ERROR: Could not read numeric TTL for ${FQDN}"
     echo "Hint: try another domain with valid A record."
