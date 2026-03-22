@@ -35,6 +35,14 @@ Status endpoint command:
   - safe to rerun (detects if already applied)
   - intended to be used after upstream pulls
 
+- `forkadguardhome`:
+  - single-command workflow:
+    - `forkadguardhome update`
+    - `forkadguardhome reinstall`
+    - `forkadguardhome delete`
+  - uses upstream AdGuard Home source and applies only TTL-10% optimistic refresh patch
+  - intended for users who want a very simple terminal UX
+
 - `patches/0001-optimistic-prefetch-ttl10.patch`:
   - patch payload used by the apply script
 
@@ -79,4 +87,20 @@ If you use plain upstream AGH source and want to reapply only this feature:
 ```sh
 cd /path/to/AdGuardHome
 ./scripts/custom/apply-ttl10-prefetch-patch.sh .
+```
+
+## Super-simple CLI setup
+
+Install helper command once:
+
+```sh
+sudo install -m 0755 ./scripts/custom/forkadguardhome /usr/local/sbin/forkadguardhome
+```
+
+Then use:
+
+```sh
+sudo forkadguardhome update
+sudo forkadguardhome reinstall
+sudo forkadguardhome delete
 ```
