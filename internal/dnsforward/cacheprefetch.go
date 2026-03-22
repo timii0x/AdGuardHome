@@ -22,6 +22,7 @@ const (
 )
 
 const defaultPrefetchKeepDays uint32 = 5
+const defaultPrefetchTTLRefreshPercent uint32 = 10
 
 func isValidPrefetchKeepDays(days uint32) (ok bool) {
 	switch days {
@@ -64,6 +65,7 @@ func isValidPrefetchMode(mode cacheOptimisticPrefetchMode) (ok bool) {
 type prefetchHostStats struct {
 	lastSeen     time.Time
 	lastPrefetch time.Time
+	nextPrefetch time.Time
 	hourStart    time.Time
 	hitsInHour   uint32
 	wantA        bool
@@ -182,6 +184,10 @@ func (s *Server) collectPrefetchTargets(
 			continue
 		}
 
+		if !stats.nextPrefetch.IsZero() && now.Before(stats.nextPrefetch) {
+			continue
+		}
+
 		if !stats.isEligible(mode, hourStart) {
 			continue
 		}
@@ -234,6 +240,8 @@ func (s *Server) prefetchResolve(ctx context.Context, prx *proxy.Proxy, host str
 			err,
 		)
 	}
+
+	s.updateOptimisticPrefetchTTL(host, qtype, pctx.Res, time.Now())
 }
 
 func (st *prefetchHostStats) isEligible(
@@ -254,7 +262,7 @@ func (st *prefetchHostStats) isEligible(
 
 // recordOptimisticPrefetchHitLocked records a domain hit for threshold-based
 // optimistic prefetching.  s.serverLock is expected to be locked.
-func (s *Server) recordOptimisticPrefetchHitLocked(host string, qtype uint16) {
+func (s *Server) recordOptimisticPrefetchHitLocked(host string, qtype uint16, resp *dns.Msg) {
 	mode := normalizePrefetchMode(s.conf.CacheOptimisticPrefetchMode)
 	if !s.conf.CacheEnabled || !s.conf.CacheOptimistic || mode == cacheOptimisticPrefetchModeDisabled {
 		return
@@ -296,6 +304,86 @@ func (s *Server) recordOptimisticPrefetchHitLocked(host string, qtype uint16) {
 	st.lastSeen = now
 	st.wantA = st.wantA || qtype == dns.TypeA
 	st.wantAAAA = st.wantAAAA || qtype == dns.TypeAAAA
+	st.setTTLRefreshSchedule(now, ttlFromResponse(resp, qtype))
+}
+
+// updateOptimisticPrefetchTTL updates cached TTL schedule for prefetch entries.
+// It's used to keep background prefetch cadence aligned with current response
+// TTL values.
+func (s *Server) updateOptimisticPrefetchTTL(
+	host string,
+	qtype uint16,
+	resp *dns.Msg,
+	now time.Time,
+) {
+	if host == "" {
+		return
+	}
+
+	switch qtype {
+	case dns.TypeA, dns.TypeAAAA:
+	default:
+		return
+	}
+
+	ttl := ttlFromResponse(resp, qtype)
+	if ttl <= 0 {
+		return
+	}
+
+	s.prefetchLock.Lock()
+	defer s.prefetchLock.Unlock()
+
+	st, ok := s.prefetchHosts[host]
+	if !ok {
+		return
+	}
+
+	st.setTTLRefreshSchedule(now, ttl)
+}
+
+func (st *prefetchHostStats) setTTLRefreshSchedule(now time.Time, ttl time.Duration) {
+	if ttl <= 0 {
+		return
+	}
+
+	refreshWindow := ttl * time.Duration(defaultPrefetchTTLRefreshPercent) / 100
+	if refreshWindow == 0 && ttl > time.Second {
+		refreshWindow = time.Second
+	}
+
+	next := now.Add(ttl - refreshWindow)
+	if !st.nextPrefetch.IsZero() && now.Before(st.nextPrefetch) && next.After(st.nextPrefetch) {
+		return
+	}
+
+	st.nextPrefetch = next
+}
+
+func ttlFromResponse(resp *dns.Msg, qtype uint16) (ttl time.Duration) {
+	if resp == nil {
+		return 0
+	}
+
+	found := false
+	var ttlSec uint32
+	for _, rr := range resp.Answer {
+		hdr := rr.Header()
+		if hdr == nil || hdr.Rrtype != qtype {
+			continue
+		}
+
+		if !found || hdr.Ttl < ttlSec {
+			found = true
+			ttlSec = hdr.Ttl
+		}
+	}
+
+	if !found {
+		return 0
+	}
+
+	return time.Duration(ttlSec) * time.Second
 }
 
 func (req *jsonDNSConfig) checkCachePrefetchMode() (err error) {

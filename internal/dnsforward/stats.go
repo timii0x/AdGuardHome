@@ -44,7 +44,7 @@ func (s *Server) processQueryLogsAndStats(ctx context.Context, dctx *dnsContext)
 	s.serverLock.RLock()
 	defer s.serverLock.RUnlock()
 
-	s.recordOptimisticPrefetchHitLocked(host, qt)
+	s.recordOptimisticPrefetchHitLocked(host, qt, pctx.Res)
 
 	if s.shouldLog(host, qt, cl, ids) {
 		s.logQuery(dctx, ip, processingTime)
